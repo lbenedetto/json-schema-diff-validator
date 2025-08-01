@@ -1,0 +1,765 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "AmountSerializable" : {
+      "type" : "object",
+      "properties" : {
+        "code" : {
+          "type" : "string"
+        },
+        "decimals" : {
+          "type" : "integer"
+        },
+        "minorUnits" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "code", "decimals", "minorUnits" ]
+    },
+    "AmountSerializable-nullable" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "$ref" : "#/$defs/AmountSerializable"
+      } ]
+    },
+    "CountryId" : {
+      "type" : "object",
+      "properties" : {
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "value" ]
+    },
+    "DynamicPricePathSerializable-nullable" : {
+      "type" : [ "object", "null" ],
+      "properties" : {
+        "id" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : "integer"
+            }
+          },
+          "required" : [ "value" ]
+        },
+        "modelVersion" : {
+          "type" : "string"
+        },
+        "pricePath" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "modelVersion", "pricePath" ]
+    },
+    "ItemId" : {
+      "type" : "object",
+      "properties" : {
+        "value" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "value" ]
+    },
+    "PercentageSerializable" : {
+      "type" : "object",
+      "properties" : {
+        "value" : {
+          "type" : "number"
+        }
+      },
+      "required" : [ "value" ]
+    },
+    "PictureSerializable-nullable" : {
+      "type" : [ "object", "null" ],
+      "properties" : {
+        "automaticallyGenerated" : {
+          "type" : "boolean"
+        },
+        "currentUrl" : {
+          "type" : "string"
+        },
+        "hasThumbnail" : {
+          "type" : "boolean"
+        },
+        "pictureId" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : "integer"
+            }
+          },
+          "required" : [ "value" ]
+        }
+      },
+      "required" : [ "automaticallyGenerated", "currentUrl", "hasThumbnail", "pictureId" ]
+    },
+    "WindowSerializable" : {
+      "type" : "object",
+      "properties" : {
+        "end" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "start" : {
+          "type" : "string",
+          "format" : "date-time"
+        }
+      },
+      "required" : [ "end", "start" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "active" : {
+      "type" : "boolean"
+    },
+    "additionalItemProperties" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "type" : "object",
+        "properties" : {
+          "allergensDescription" : {
+            "type" : [ "string", "null" ]
+          },
+          "allergensShownOnCheckout" : {
+            "type" : "boolean"
+          },
+          "allergensTitle" : {
+            "type" : [ "string", "null" ]
+          },
+          "allergensUrl" : {
+            "type" : [ "string", "null" ]
+          },
+          "attachmentUrl" : {
+            "type" : [ "string", "null" ]
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "updatedAtUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "allergensShownOnCheckout", "itemId", "updatedAtUtc" ]
+      }, {
+        "type" : "object",
+        "properties" : {
+          "boxHeightMM" : {
+            "type" : [ "integer", "null" ]
+          },
+          "boxLengthMM" : {
+            "type" : [ "integer", "null" ]
+          },
+          "boxWeightGrams" : {
+            "type" : [ "integer", "null" ]
+          },
+          "boxWidthMM" : {
+            "type" : [ "integer", "null" ]
+          },
+          "brandLogo" : {
+            "$ref" : "#/$defs/PictureSerializable-nullable"
+          },
+          "brandName" : {
+            "type" : [ "string", "null" ]
+          },
+          "estimatedDelivery" : {
+            "type" : [ "string", "null" ]
+          },
+          "faqList" : {
+            "type" : [ "array", "null" ],
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "answer" : {
+                  "type" : "string"
+                },
+                "id" : {
+                  "type" : "integer"
+                },
+                "itemId" : {
+                  "anyOf" : [ {
+                    "type" : "null"
+                  }, {
+                    "$ref" : "#/$defs/ItemId"
+                  } ]
+                },
+                "linkText" : {
+                  "type" : [ "string", "null" ]
+                },
+                "linkUrl" : {
+                  "type" : [ "string", "null" ]
+                },
+                "question" : {
+                  "type" : "string"
+                },
+                "sequence" : {
+                  "type" : "integer"
+                },
+                "topic" : {
+                  "type" : "string",
+                  "enum" : [ "INGREDIENTS_AND_ALLERGENS", "WHAT_IS_MP", "PRODUCT_VALUE", "HOW_MP_DELIVERED_HOME", "HOW_MP_DELIVERED_HOME_AND_PICKUP", "HOW_MP_DELIVERED_PICKUP", "MP_SHELF_LIFE" ]
+                }
+              },
+              "required" : [ "answer", "id", "question", "sequence", "topic" ]
+            }
+          },
+          "freeDelivery" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "itemExperimentVariant" : {
+            "anyOf" : [ {
+              "type" : "null"
+            }, {
+              "type" : "string",
+              "enum" : [ "VISIBLE_TO_ALL", "VISIBLE_TO_GROUP_A", "VISIBLE_TO_GROUP_B" ]
+            } ]
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "itemSurpriseLevel" : {
+            "type" : [ "integer", "null" ]
+          },
+          "itemsSoldToday" : {
+            "type" : [ "integer", "null" ]
+          },
+          "minimumExpirationDate" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "parcelType" : {
+            "anyOf" : [ {
+              "type" : "null"
+            }, {
+              "type" : "string",
+              "enum" : [ "PANTRY", "SNACKS", "BREAKFAST", "MEALS", "KIDS", "DRINKS", "SEASONAL", "HEALTH", "OTHER", "PETFOOD" ]
+            } ]
+          },
+          "priceBeforeDiscount" : {
+            "$ref" : "#/$defs/AmountSerializable-nullable"
+          },
+          "productCount" : {
+            "type" : "integer"
+          },
+          "updatedAtUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "itemId", "productCount", "updatedAtUtc" ]
+      }, {
+        "type" : "object",
+        "properties" : {
+          "flashSalesItemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "updatedAtUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "flashSalesItemId", "itemId", "updatedAtUtc" ]
+      }, {
+        "type" : "object",
+        "properties" : {
+          "calories" : {
+            "type" : "integer"
+          },
+          "deliveryVendor" : {
+            "type" : "string",
+            "enum" : [ "GOODSPEED" ]
+          },
+          "estimatedDelivery" : {
+            "type" : [ "string", "null" ]
+          },
+          "faqList" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "answer" : {
+                  "type" : "string"
+                },
+                "itemId" : {
+                  "$ref" : "#/$defs/ItemId"
+                },
+                "linkText" : {
+                  "type" : [ "string", "null" ]
+                },
+                "linkUrl" : {
+                  "type" : [ "string", "null" ]
+                },
+                "question" : {
+                  "type" : "string"
+                },
+                "sequence" : {
+                  "type" : "integer"
+                },
+                "topic" : {
+                  "type" : "string",
+                  "enum" : [ "WHAT_IS_CATERING_MEAL", "HOW_IS_CATERING_DELIVERED", "CATERING_SHELF_LIFE" ]
+                }
+              },
+              "required" : [ "answer", "itemId", "question", "sequence", "topic" ]
+            }
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "updatedAtUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "calories", "deliveryVendor", "faqList", "itemId", "updatedAtUtc" ]
+      } ]
+    },
+    "background" : {
+      "$ref" : "#/$defs/PictureSerializable-nullable"
+    },
+    "buffet" : {
+      "type" : "boolean"
+    },
+    "buffetInstructions" : {
+      "type" : [ "string", "null" ]
+    },
+    "collectionInfo" : {
+      "type" : [ "string", "null" ]
+    },
+    "debtor" : {
+      "type" : "object",
+      "properties" : {
+        "countryId" : {
+          "$ref" : "#/$defs/CountryId"
+        },
+        "taxIdentifier" : {
+          "type" : [ "string", "null" ]
+        },
+        "updatedAtUtc" : {
+          "type" : "string",
+          "format" : "date-time"
+        }
+      },
+      "required" : [ "countryId", "updatedAtUtc" ]
+    },
+    "deliveryMethod" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "type" : "string",
+        "enum" : [ "HOME", "PICKUP", "HOME_AND_PICKUP" ]
+      } ]
+    },
+    "dietCategories" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "enum" : [ "VEGETARIAN", "VEGAN" ]
+      },
+      "uniqueItems" : true
+    },
+    "dynamicPricePath" : {
+      "$ref" : "#/$defs/DynamicPricePathSerializable-nullable"
+    },
+    "dynamicPriceRoundingId" : {
+      "type" : [ "integer", "null" ]
+    },
+    "firstActiveAtUtc" : {
+      "type" : [ "string", "null" ],
+      "format" : "date-time"
+    },
+    "firstMealSavedAtUtc" : {
+      "type" : [ "string", "null" ],
+      "format" : "date-time"
+    },
+    "foodHandlingInstructions" : {
+      "type" : [ "string", "null" ]
+    },
+    "hasAdditionalFees" : {
+      "type" : "boolean"
+    },
+    "id" : {
+      "$ref" : "#/$defs/ItemId"
+    },
+    "inventory" : {
+      "type" : [ "object", "null" ],
+      "properties" : {
+        "dynamicPricePath" : {
+          "$ref" : "#/$defs/DynamicPricePathSerializable-nullable"
+        },
+        "dynamicPriceRoundingId" : {
+          "type" : [ "integer", "null" ]
+        },
+        "id" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : "integer"
+            }
+          },
+          "required" : [ "value" ]
+        },
+        "initialSalesEnd" : {
+          "type" : [ "string", "null" ],
+          "format" : "date-time"
+        },
+        "pickupWindow" : {
+          "$ref" : "#/$defs/WindowSerializable"
+        },
+        "salesWindow" : {
+          "$ref" : "#/$defs/WindowSerializable"
+        },
+        "soldOutAt" : {
+          "type" : [ "string", "null" ],
+          "format" : "date-time"
+        },
+        "supplyAvailable" : {
+          "type" : "integer"
+        },
+        "updatedAtUtc" : {
+          "type" : [ "string", "null" ],
+          "format" : "date-time"
+        }
+      },
+      "required" : [ "id", "pickupWindow", "salesWindow", "supplyAvailable" ]
+    },
+    "inventoryType" : {
+      "type" : "string",
+      "enum" : [ "SCHEDULED_SUPPLY", "ROLLING_SUPPLY", "LONG_SALES_WINDOW" ]
+    },
+    "itemAverageOverallRating" : {
+      "type" : [ "object", "null" ],
+      "properties" : {
+        "averageOverallRating" : {
+          "type" : "number"
+        },
+        "collectionExperience" : {
+          "type" : [ "number", "null" ]
+        },
+        "contentsVariety" : {
+          "type" : [ "number", "null" ]
+        },
+        "foodQuality" : {
+          "type" : [ "number", "null" ]
+        },
+        "foodQuantity" : {
+          "type" : [ "number", "null" ]
+        },
+        "monthCount" : {
+          "type" : "integer"
+        },
+        "ratingCount" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "averageOverallRating", "monthCount", "ratingCount" ]
+    },
+    "itemCategory" : {
+      "type" : "string",
+      "enum" : [ "MEAL", "BAKED_GOODS", "OTHER", "GROCERIES", "NON_FOOD", "ESSENTIAL_BAG", "PET_FOOD", "FLOWERS_PLANTS" ]
+    },
+    "itemFees" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "beneficiary" : {
+            "type" : "string",
+            "enum" : [ "STORE", "TGTG" ]
+          },
+          "createdBy" : {
+            "type" : [ "object", "null" ],
+            "properties" : {
+              "value" : {
+                "type" : "integer"
+              }
+            },
+            "required" : [ "value" ]
+          },
+          "dynamicPricePercentage" : {
+            "anyOf" : [ {
+              "type" : "null"
+            }, {
+              "$ref" : "#/$defs/PercentageSerializable"
+            } ]
+          },
+          "fee" : {
+            "$ref" : "#/$defs/AmountSerializable"
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "MEAL_FEE", "BAG_FEE", "DELIVERY_FEE", "PUDO_DELIVERY_FEE", "HOME_DELIVERY_FEE", "EXPRESS_HOME_DELIVERY_FEE" ]
+          },
+          "visibility" : {
+            "type" : "string",
+            "enum" : [ "INVISIBLE", "DISCOVER", "CHECKOUT" ]
+          }
+        },
+        "required" : [ "beneficiary", "fee", "itemId", "type", "visibility" ]
+      }
+    },
+    "itemType" : {
+      "type" : "string",
+      "enum" : [ "MAGIC_BAG", "CHARITY", "MANUFACTURER", "FLASH_SALES", "DELIVERY_FEE", "CATERING" ]
+    },
+    "localizationCode" : {
+      "type" : [ "string", "null" ]
+    },
+    "localizations" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "createdAtUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "description" : {
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "type" : "object",
+            "properties" : {
+              "value" : {
+                "type" : "integer"
+              }
+            },
+            "required" : [ "value" ]
+          },
+          "isDefault" : {
+            "type" : "boolean"
+          },
+          "localizationCode" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : [ "string", "null" ]
+          },
+          "subtitle" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAtUtc", "id", "isDefault", "localizationCode" ]
+      }
+    },
+    "logo" : {
+      "$ref" : "#/$defs/PictureSerializable-nullable"
+    },
+    "name" : {
+      "type" : [ "string", "null" ]
+    },
+    "packagingOption" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "type" : "string",
+        "enum" : [ "CANT_BRING_ANYTHING", "BAG_ALLOWED", "MUST_BRING_BAG", "MUST_BRING_PACKAGING", "ADDITIONAL_CHARGES_MAY_APPLY", "ADDITIONAL_CHARGES_MANDATED" ]
+      } ]
+    },
+    "positiveRatingReasons" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "enum" : [ "QUANTITY_NOT_ENOUGH", "QUANTITY_TOO_MUCH", "QUANTITY_OTHERS_GOT_MORE", "QUANTITY_OTHER_REASON", "QUALITY_NOT_FRESH", "QUALITY_INEDIBLE", "QUALITY_BAD_TASTE", "QUALITY_EXPECTED_SOMETHING_ELSE", "QUALITY_OTHER_REASON", "STORE_EXPERIENCE_NOTHING_WRONG", "STORE_EXPERIENCE_UNTRAINED_STAFF", "STORE_EXPERIENCE_FELT_UNWELCOME", "STORE_EXPERIENCE_SWIPING_CONFUSION", "STORE_EXPERIENCE_OTHER_USERS", "STORE_EXPERIENCE_LONG_WAIT", "STORE_EXPERIENCE_BAD_PACKAGING", "STORE_EXPERIENCE_OTHER_REASON", "BAG_CONTENT_NOTHING_WRONG", "BAG_CONTENT_NOT_ENOUGH_FOOD", "BAG_CONTENT_NOT_ENOUGH_VARIETY", "BAG_CONTENT_NOT_FRESH", "BAG_CONTENT_BAD_TASTE", "BAG_CONTENT_EXPECTED_SOMETHING_ELSE", "BAG_CONTENT_OTHER_REASON", "POSITIVE_FEEDBACK_GREAT_VALUE", "POSITIVE_FEEDBACK_GREAT_QUANTITY", "POSITIVE_FEEDBACK_DELICIOUS_FOOD", "POSITIVE_FEEDBACK_FRIENDLY_STAFF", "POSITIVE_FEEDBACK_GREAT_VARIETY", "POSITIVE_FEEDBACK_QUICK_COLLECTION", "UNFAMILIAR_STAFF", "UNFRIENDLY_STAFF", "LONG_WAIT_TIMES", "POORLY_PACKAGED", "STORE_CLOSED", "POOR_CLEANLINESS", "AREA_HARD_TO_FIND", "COLLECTION_EXPERIENCE_OTHER", "FOOD_NOT_FRESH", "SPOILED_OR_EXPIRED", "TASTES_BAD", "NOT_MATCHING_DESCRIPTION", "FOOD_QUALITY_OTHER", "MANY_DUPLICATES", "EXPECTED_SOMETHING_ELSE", "CONTENTS_VARIETY_OTHER", "LESS_FOOD_THAN_EXPECTED", "QUANTITY_DID_NOT_MATCH", "TOO_SMALL_PORTIONS", "FOOD_QUANTITY_OTHER", "OVERALL_EXPERIENCE_OTHER", "GET_TREAT_OR_SNACK", "SUPPLEMENT_SHOPPING", "REPLACE_SHOPPING", "GET_HEALTHY_MEAL", "REPLACE_COOKING", "DISCOVER_NEW_PLACE", "DISCOVER_NEW_ITEMS", "STOCK_UP", "SHARE_FOOD", "GET_FOOD_NEXT_DAYS", "GET_MEAL", "USP_QUESTION_OTHER" ]
+      }
+    },
+    "price" : {
+      "$ref" : "#/$defs/AmountSerializable-nullable"
+    },
+    "probabilityOfSellingOut" : {
+      "type" : [ "integer", "null" ]
+    },
+    "salesTaxes" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "applicableFor" : {
+            "anyOf" : [ {
+              "type" : "null"
+            }, {
+              "type" : "string",
+              "enum" : [ "ITEM", "BAG_FEE" ]
+            } ]
+          },
+          "applicableFromUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "applicableToUtc" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "handlingEntity" : {
+            "type" : "string",
+            "enum" : [ "STORE", "TGTG" ]
+          },
+          "id" : {
+            "type" : "object",
+            "properties" : {
+              "value" : {
+                "type" : "integer"
+              }
+            },
+            "required" : [ "value" ]
+          },
+          "itemId" : {
+            "$ref" : "#/$defs/ItemId"
+          },
+          "specialMealTaxId" : {
+            "type" : [ "object", "null" ],
+            "properties" : {
+              "value" : {
+                "type" : "integer"
+              }
+            },
+            "required" : [ "value" ]
+          },
+          "taxPercent" : {
+            "$ref" : "#/$defs/PercentageSerializable"
+          },
+          "taxType" : {
+            "type" : "string",
+            "enum" : [ "STATE_SALES_TAX", "CITY_SALES_TAX", "COUNTY_SALES_TAX", "SPECIAL_SALES_TAX", "GST_SALES_TAX", "PST_SALES_TAX", "QST_SALES_TAX", "HST_SALES_TAX", "VAT_SALES_TAX", "SPECIAL_MEAL_TAX" ]
+          }
+        },
+        "required" : [ "applicableFromUtc", "applicableToUtc", "description", "handlingEntity", "id", "itemId", "taxPercent", "taxType" ]
+      }
+    },
+    "saveRatio21Days" : {
+      "type" : [ "number", "null" ]
+    },
+    "smileyReportId" : {
+      "type" : [ "string", "null" ]
+    },
+    "store" : {
+      "type" : "object",
+      "properties" : {
+        "activityId" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : "integer"
+            }
+          },
+          "required" : [ "value" ]
+        },
+        "branch" : {
+          "type" : [ "string", "null" ]
+        },
+        "currency" : {
+          "type" : "string"
+        },
+        "description" : {
+          "type" : "string"
+        },
+        "id" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : "integer"
+            }
+          },
+          "required" : [ "value" ]
+        },
+        "isDonation" : {
+          "type" : "boolean"
+        },
+        "isHidden" : {
+          "type" : "boolean"
+        },
+        "isManufacturerStore" : {
+          "type" : "boolean"
+        },
+        "isParentExcludeFromWebSEO" : {
+          "type" : [ "boolean", "null" ]
+        },
+        "location" : {
+          "type" : "object",
+          "properties" : {
+            "addressLine" : {
+              "type" : "string"
+            },
+            "city" : {
+              "type" : "string"
+            },
+            "countryId" : {
+              "$ref" : "#/$defs/CountryId"
+            },
+            "countryName" : {
+              "type" : "string"
+            },
+            "displayAddress" : {
+              "type" : "string"
+            },
+            "geoLocation" : {
+              "type" : [ "object", "null" ],
+              "properties" : {
+                "latitude" : {
+                  "type" : "number"
+                },
+                "longitude" : {
+                  "type" : "number"
+                }
+              },
+              "required" : [ "latitude", "longitude" ]
+            },
+            "postalCode" : {
+              "type" : "string"
+            }
+          },
+          "required" : [ "addressLine", "city", "countryId", "countryName", "displayAddress", "postalCode" ]
+        },
+        "logo" : {
+          "$ref" : "#/$defs/PictureSerializable-nullable"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "timeZone" : {
+          "type" : "string"
+        },
+        "updatedAtUtc" : {
+          "type" : [ "string", "null" ],
+          "format" : "date-time"
+        },
+        "website" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "activityId", "currency", "description", "id", "isDonation", "isHidden", "isManufacturerStore", "location", "name", "timeZone", "website" ]
+    },
+    "taxationPolicy" : {
+      "type" : "string",
+      "enum" : [ "PRICE_INCLUDES_TAXES", "PRICE_DOES_NOT_INCLUDE_TAXES" ]
+    },
+    "taxationRoundingPolicy" : {
+      "type" : "string",
+      "enum" : [ "ROUND_HALF_UP", "ROUND_FLOOR" ]
+    },
+    "totalSupply21Days" : {
+      "type" : [ "integer", "null" ]
+    },
+    "updatedAtUtc" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "value" : {
+      "$ref" : "#/$defs/AmountSerializable-nullable"
+    }
+  },
+  "required" : [ "active", "buffet", "debtor", "dietCategories", "hasAdditionalFees", "id", "inventoryType", "itemCategory", "itemFees", "itemType", "localizations", "positiveRatingReasons", "salesTaxes", "store", "taxationPolicy", "taxationRoundingPolicy", "updatedAtUtc" ]
+}

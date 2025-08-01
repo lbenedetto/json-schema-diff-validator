@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "description": "Sample schema for minItems test",
+  "$ref": "#/definitions/root",
+  "definitions": {
+    "doc": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}
