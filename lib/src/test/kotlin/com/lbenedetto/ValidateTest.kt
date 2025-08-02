@@ -4,10 +4,11 @@ import com.lbenedetto.util.PatchDSL.add
 import com.lbenedetto.util.PatchDSL.jsonString
 import com.lbenedetto.util.PatchDSL.replace
 import com.lbenedetto.util.Util
+import com.lbenedetto.util.Util.shouldHaveErrors
+import com.lbenedetto.util.Util.shouldNotHaveErrors
 import com.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 
 internal class ValidateTest : BehaviorSpec({
   Given("A schema") {
@@ -27,9 +28,7 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("An exception should be thrown") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema)
-        }
+        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
       }
     }
 
@@ -39,7 +38,7 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("No exception should be thrown") {
-        assertDoesNotThrow { Validator.validate(oldSchema, newSchema) }
+        Validator.validate(oldSchema, newSchema).shouldNotHaveErrors()
       }
     }
 
@@ -50,9 +49,7 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("An exception should be thrown") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema)
-        }
+        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
       }
     }
 
@@ -63,9 +60,7 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("An exception should be thrown") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema)
-        }
+        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
       }
     }
 
@@ -76,9 +71,7 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("An exception should be thrown") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema)
-        }
+        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
       }
     }
   }

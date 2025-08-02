@@ -1,13 +1,15 @@
 package com.lbenedetto
 
+import com.lbenedetto.Compatibility.ALLOWED
+import com.lbenedetto.Compatibility.FORBIDDEN
 import com.lbenedetto.util.PatchDSL.add
 import com.lbenedetto.util.PatchDSL.jsonObject
 import com.lbenedetto.util.PatchDSL.replace
 import com.lbenedetto.util.Util
+import com.lbenedetto.util.Util.shouldHaveErrors
+import com.lbenedetto.util.Util.shouldNotHaveErrors
 import com.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 
 internal class AllowReorderTest : BehaviorSpec({
   Given("A schema with an inline node") {
@@ -19,16 +21,12 @@ internal class AllowReorderTest : BehaviorSpec({
         add("/definitions/inline_node/anyOf/1", jsonObject("\$ref" to "\"#/definitions/inline_node\""))
       )
 
-      Then("Should throw if allowReorder is false") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema, allowReorder = false)
-        }
+      Then("Should have errors if allowReorder is false") {
+        Validator.validate(oldSchema, newSchema, Config(reorder = FORBIDDEN)).shouldHaveErrors()
       }
 
-      Then("Should not throw if allowReorder is true") {
-        assertDoesNotThrow {
-          Validator.validate(oldSchema, newSchema, allowReorder = true)
-        }
+      Then("Should not have errors if allowReorder is true") {
+        Validator.validate(oldSchema, newSchema, Config(reorder = ALLOWED)).shouldNotHaveErrors()
       }
     }
 
@@ -38,16 +36,12 @@ internal class AllowReorderTest : BehaviorSpec({
         replace("/definitions/inline_node/anyOf/0", jsonObject("\$ref" to "\"#/definitions/inline_node\""))
       )
 
-      Then("Should throw if allowReorder is false") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema, allowReorder = false)
-        }
+      Then("Should have errors if allowReorder is false") {
+        Validator.validate(oldSchema, newSchema, Config(reorder = FORBIDDEN)).shouldHaveErrors()
       }
 
-      Then("Should throw if allowReorder is true") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema, allowReorder = true)
-        }
+      Then("Should have errors if allowReorder is true") {
+        Validator.validate(oldSchema, newSchema, Config(reorder = ALLOWED)).shouldHaveErrors()
       }
     }
   }

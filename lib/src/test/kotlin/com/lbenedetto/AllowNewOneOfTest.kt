@@ -1,12 +1,14 @@
 package com.lbenedetto
 
+import com.lbenedetto.Compatibility.ALLOWED
+import com.lbenedetto.Compatibility.FORBIDDEN
 import com.lbenedetto.util.PatchDSL.add
 import com.lbenedetto.util.PatchDSL.jsonObject
 import com.lbenedetto.util.Util
+import com.lbenedetto.util.Util.shouldHaveErrors
+import com.lbenedetto.util.Util.shouldNotHaveErrors
 import com.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 
 internal class AllowNewOneOfTest : BehaviorSpec({
   Given("A new oneOf element is added to the schema") {
@@ -18,14 +20,14 @@ internal class AllowNewOneOfTest : BehaviorSpec({
     )
 
     When("allowNewOneOf is set to true") {
-      Then("No exception is thrown") {
-        assertDoesNotThrow { Validator.validate(oldSchema, newSchema, allowNewOneOf = true) }
+      Then("No errors") {
+        Validator.validate(oldSchema, newSchema, Config(newOneOf = ALLOWED)).shouldNotHaveErrors()
       }
     }
 
     When("allowNewOneOf is set to false") {
       Then("An exception is thrown") {
-        assertThrows<IllegalStateException> { Validator.validate(oldSchema, newSchema, allowNewOneOf = false) }
+        Validator.validate(oldSchema, newSchema, Config(newOneOf = FORBIDDEN)).shouldHaveErrors()
       }
     }
   }

@@ -1,12 +1,14 @@
 package com.lbenedetto
 
+import com.lbenedetto.Compatibility.ALLOWED
+import com.lbenedetto.Compatibility.FORBIDDEN
 import com.lbenedetto.util.PatchDSL.add
 import com.lbenedetto.util.PatchDSL.jsonString
 import com.lbenedetto.util.Util
+import com.lbenedetto.util.Util.shouldHaveErrors
+import com.lbenedetto.util.Util.shouldNotHaveErrors
 import com.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 
 internal class AllowNewEnumValueTest : BehaviorSpec({
   Given("A schema with an enum") {
@@ -18,16 +20,12 @@ internal class AllowNewEnumValueTest : BehaviorSpec({
         add("/definitions/anotherItem/properties/tshirt/size/enum/-", jsonString("large"))
       )
 
-      Then("Should not throw an exception if allowNewEnumValue is true") {
-        assertDoesNotThrow {
-          Validator.validate(oldSchema, newSchema, allowNewEnumValue = true)
-        }
+      Then("Should not have errors if allowNewEnumValue is ALLOWED") {
+        Validator.validate(oldSchema, newSchema, Config(newEnumValue = ALLOWED)).shouldNotHaveErrors()
       }
 
-      Then("Should throw an exception if allowNewEnumValue is false") {
-        assertThrows<IllegalStateException> {
-          Validator.validate(oldSchema, newSchema, allowNewEnumValue = false)
-        }
+      Then("Should have errors if allowNewEnumValue is FORBIDDEN") {
+        Validator.validate(oldSchema, newSchema, Config(newEnumValue = FORBIDDEN)).shouldHaveErrors()
       }
     }
   }

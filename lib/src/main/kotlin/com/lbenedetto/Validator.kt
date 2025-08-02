@@ -21,15 +21,12 @@ object Validator {
   fun validate(
     oldSchemaPath: String,
     newSchemaPath: String,
-    allowNewOneOf: Boolean = false,
-    allowNewEnumValue: Boolean = false,
-    allowReorder: Boolean = false,
-    allowRemovingOptionalFields: Boolean = true
-  ) {
+    config: Config = Config()
+  ) : ValidationResult {
     val oldSchema = objectMapper.readTree(Paths.get(oldSchemaPath).toFile())
     val newSchema = objectMapper.readTree(Paths.get(newSchemaPath).toFile())
 
-    validate(oldSchema, newSchema, allowNewOneOf, allowNewEnumValue, allowReorder, allowRemovingOptionalFields)
+    return validate(oldSchema, newSchema, config)
   }
 
   /**
@@ -39,20 +36,16 @@ object Validator {
   fun validate(
     oldSchema: JsonNode,
     newSchema: JsonNode,
-    allowNewOneOf: Boolean = false,
-    allowNewEnumValue: Boolean = false,
-    allowReorder: Boolean = false,
-    allowRemovingOptionalFields: Boolean = true
-  ) {
+    config: Config = Config()
+  ): ValidationResult {
     val diff = JsonDiff.asJson(oldSchema, newSchema)
-    val incompatibleChanges = mutableListOf<JsonNode>()
 
+    val validationResult = ValidationResult()
     // For tracking replaced and inserted items when allowReorder is true
     val removed = mutableListOf<Pair<String, JsonNode>>()
     val inserted = mutableListOf<String>()
 
-    for (i in 0 until diff.size()) {
-      val node = diff[i]
+    diff.forEach { node ->
       val operation = Operation.fromRfcName(node["op"].asText())
       val path = node["path"].asText()
 
@@ -62,31 +55,30 @@ object Validator {
         Operation.MOVE, Operation.REMOVE -> {
           if (getSecondLastSubPath(path) == REQUIRED || isMinItems) {
             // Skip required field removals and minItems changes
-            continue
+            return@forEach
           }
 
-          if (allowRemovingOptionalFields && !isFieldRequired(oldSchema, path)) {
-            continue
+          if (!isFieldRequired(oldSchema, path)) {
+            validationResult[config.removingOptionalFields].add(node)
+            return@forEach
           }
 
-          incompatibleChanges.add(node)
+          validationResult[Compatibility.FORBIDDEN].add(node)
         }
 
         Operation.REPLACE -> {
           val oldValue = getJsonNodeAtPath(oldSchema, path)
           if (isMinItems && oldValue.isInt && oldValue.asInt() > node["value"].asInt()) {
             // Skip decreasing minItems
-            continue
+            return@forEach
+          } else if (config.reorder == Compatibility.ALLOWED) {
+            // Track for reordering check
+            val oldValueText = if (oldValue.isTextual) oldValue.asText() else oldValue.toString()
+            removed.add(Pair(oldValueText, node))
+            val newValueText = if (node["value"].isTextual) node["value"].asText() else node["value"].toString()
+            inserted.add(newValueText)
           } else {
-            if (!allowReorder) {
-              incompatibleChanges.add(node)
-            } else {
-              // Track for reordering check
-              val oldValueText = if (oldValue.isTextual) oldValue.asText() else oldValue.toString()
-              removed.add(Pair(oldValueText, node))
-              val newValueText = if (node["value"].isTextual) node["value"].asText() else node["value"].toString()
-              inserted.add(newValueText)
-            }
+            validationResult[config.reorder].add(node)
           }
         }
 
@@ -97,24 +89,30 @@ object Validator {
           val lastSubPath = getLastSubPath(path)
 
           // Allow adding minimum field to properties when allowReorder is true
-          if (lastSubPath == "minimum" && allowReorder) {
-            continue
+          if (lastSubPath == "minimum") {
+            validationResult[config.reorder].add(node)
+            return@forEach
           }
 
           if (pathTwoLastLevels != PROPERTIES && pathTwoLastLevels != DEFINITIONS) {
-            if (isNewAnyOfItem && allowReorder) {
+            if (isNewAnyOfItem && config.reorder == Compatibility.ALLOWED) {
               val refValue = node["value"]["\$ref"].asText() ?: node["value"].toString()
               inserted.add(refValue)
-            } else if ((isNewAnyOfItem && allowNewOneOf) || (isNewEnumValue && allowNewEnumValue)) {
-              // Skip allowed additions
-              continue
+            } else if (isNewAnyOfItem) {
+              validationResult[config.newOneOf].add(node)
+              return@forEach
+            } else if(isNewEnumValue) {
+              validationResult[config.newEnumValue].add(node)
+              return@forEach
             } else {
-              incompatibleChanges.add(node)
+              validationResult[Compatibility.FORBIDDEN].add(node)
+              return@forEach
             }
           }
 
           if (pathTwoLastLevels == REQUIRED) {
-            incompatibleChanges.add(node)
+            validationResult[Compatibility.FORBIDDEN].add(node)
+            return@forEach
           }
         }
         Operation.COPY, Operation.TEST -> println("Unsupported operation: $node")
@@ -122,18 +120,12 @@ object Validator {
     }
 
     // When reordering is allowed, check that any removed item is also inserted somewhere else
-    if (allowReorder) {
-      for (pair in removed) {
-        if (!inserted.contains(pair.first)) {
-          incompatibleChanges.add(pair.second)
-        }
-      }
+    if (config.reorder != Compatibility.FORBIDDEN) {
+      removed.filter { !inserted.contains(it.first) }
+        .forEach { validationResult[Compatibility.FORBIDDEN].add(it.second) }
     }
 
-    // Assert that there are no incompatible changes
-    if (incompatibleChanges.isNotEmpty()) {
-      throw IllegalStateException("The schema is not backward compatible. Difference include breaking change = ${incompatibleChanges}")
-    }
+    return validationResult
   }
 
   /**
