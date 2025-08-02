@@ -2,8 +2,8 @@ package com.lbenedetto
 
 data class Config(
   var newOneOf: Compatibility = Compatibility.FORBIDDEN,
-  var newEnumValue: Compatibility = Compatibility.ALLOWED,
-  var anyOfReordering: Compatibility = Compatibility.ALLOWED,
+  var newEnumValue: Compatibility = Compatibility.FORBIDDEN,
+  var anyOfReordering: Compatibility = Compatibility.FORBIDDEN,
   var removingOptionalFields: Compatibility = Compatibility.ALLOWED,
   var makingFieldsRequired: Compatibility = Compatibility.FORBIDDEN
 ) {

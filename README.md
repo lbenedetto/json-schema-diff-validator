@@ -34,10 +34,10 @@ The validator checks for various types of changes, including:
 The validator can be configured with different compatibility levels for various types of changes:
 
 - `newOneOf`: Whether new oneOf/anyOf items are a backwards compatible change (`FORBIDDEN` by default)
-- `newEnumValue`: Whether new enum values are a backwards compatible change (`ALLOWED` by default)
-- `anyOfReordering`: Whether reordering of anyOf items are a backwards compatible change (`ALLOWED` by default)
+- `newEnumValue`: Whether new enum values are a backwards compatible change (`FORBIDDEN` by default)
+- `anyOfReordering`: Whether reordering of anyOf items are a backwards compatible change (`FORBIDDEN` by default)
 - `removingOptionalFields`: Whether removing optional fields is a backwards compatible change (`ALLOWED` by default)
-- `makingFieldsRequired`: Whether making fields required is a backwards compatible change (`DISCOURAGED` by default)
+- `makingFieldsRequired`: Whether making fields required is a backwards compatible change (`FORBIDDEN` by default)
 
 Each option can be set to one of three compatibility levels:
 - `ALLOWED`: Changes are permitted
