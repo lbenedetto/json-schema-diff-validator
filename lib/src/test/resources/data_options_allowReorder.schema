@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "description": "Sample schema for allowReorder option",
+  "$ref": "#/definitions/root",
+  "definitions": {
+    "root": {
+      "type": "object",
+      "content": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/inline_node"
+        }
+      }
+    },
+    "inline_node": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/hardBreak_node"
+        },
+        {
+          "$ref": "#/definitions/mention_node"
+        },
+        {
+          "$ref": "#/definitions/emoji_node"
+        }
+      ]
+    },
+    "emoji_node": {
+      "type": "object"
+    },
+    "mention_node": {
+      "type": "object"
+    },
+    "hardBreak_node": {
+      "type": "object"
+    }
+  }
+}

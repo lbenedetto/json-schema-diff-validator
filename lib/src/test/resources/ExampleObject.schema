@@ -1,0 +1,91 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$defs" : {
+    "SomePojo-nullable" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "$ref" : "#/$defs/SomePojo"
+      } ]
+    },
+    "SomePojo" : {
+      "type" : "object",
+      "properties" : {
+        "someField" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "someField" ]
+    }
+  },
+  "type" : "object",
+  "properties" : {
+    "fieldWhichReferencesRequiredTypeDef" : {
+      "$ref" : "#/$defs/SomePojo"
+    },
+    "fieldWhichReferencesNullableTypeDef" : {
+      "$ref" : "#/$defs/SomePojo-nullable"
+    },
+    "fieldWithAnyOf" : {
+      "anyOf" : [ {
+        "type" : "null"
+      }, {
+        "type" : "object",
+        "properties" : {
+          "typeARequiredField" : {
+            "type" : "string"
+          },
+          "typeAOptionalField" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "typeARequiredField" ]
+      }, {
+        "type" : "object",
+        "properties" : {
+          "typeCRequiredField" : {
+            "type" : "string"
+          },
+          "typeCOptionalField" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "typeBRequiredField" ]
+      } ]
+    },
+    "listOfEnumValues" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string",
+        "enum" : [ "VALUE_A", "VALUE_B" ]
+      }
+    },
+    "listOfObjects" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "someRequiredField" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "someOptionalField" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "someRequiredField" ]
+      }
+    },
+    "someEnumValue" : {
+      "type" : "string",
+      "enum" : [ "VALUE_A", "VALUE_B" ]
+    },
+    "someIntegerField": {
+      "type" : "integer"
+    },
+    "someNullableField" : {
+      "type" : [ "integer", "null" ]
+    }
+  },
+  "required" : [ "fieldWhichReferencesRequiredTypeDef", "listOfEnumValues", "listOfObjects", "someEnumValue" ]
+}
