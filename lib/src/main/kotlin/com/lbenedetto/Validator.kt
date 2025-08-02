@@ -71,14 +71,14 @@ object Validator {
           if (isMinItems && oldValue.isInt && oldValue.asInt() > node["value"].asInt()) {
             // Skip decreasing minItems
             return@forEach
-          } else if (config.reorder == Compatibility.ALLOWED) {
+          } else if (config.anyOfReordering == Compatibility.ALLOWED) {
             // Track for reordering check
             val oldValueText = if (oldValue.isTextual) oldValue.asText() else oldValue.toString()
             removed.add(Pair(oldValueText, node))
             val newValueText = if (node["value"].isTextual) node["value"].asText() else node["value"].toString()
             inserted.add(newValueText)
           } else {
-            validationResult[config.reorder].add(node)
+            validationResult[config.anyOfReordering].add(node)
           }
         }
 
@@ -90,12 +90,12 @@ object Validator {
 
           // Allow adding minimum field to properties when allowReorder is true
           if (lastSubPath == "minimum") {
-            validationResult[config.reorder].add(node)
+            validationResult[config.anyOfReordering].add(node)
             return@forEach
           }
 
           if (pathTwoLastLevels != PROPERTIES && pathTwoLastLevels != DEFINITIONS) {
-            if (isNewAnyOfItem && config.reorder == Compatibility.ALLOWED) {
+            if (isNewAnyOfItem && config.anyOfReordering == Compatibility.ALLOWED) {
               val refValue = node["value"]["\$ref"].asText() ?: node["value"].toString()
               inserted.add(refValue)
             } else if (isNewAnyOfItem) {
@@ -120,7 +120,7 @@ object Validator {
     }
 
     // When reordering is allowed, check that any removed item is also inserted somewhere else
-    if (config.reorder != Compatibility.FORBIDDEN) {
+    if (config.anyOfReordering != Compatibility.FORBIDDEN) {
       removed.filter { !inserted.contains(it.first) }
         .forEach { validationResult[Compatibility.FORBIDDEN].add(it.second) }
     }

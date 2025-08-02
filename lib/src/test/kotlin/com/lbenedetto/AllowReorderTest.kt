@@ -22,11 +22,11 @@ internal class AllowReorderTest : BehaviorSpec({
       )
 
       Then("Should have errors if allowReorder is false") {
-        Validator.validate(oldSchema, newSchema, Config(reorder = FORBIDDEN)).shouldHaveErrors()
+        Validator.validate(oldSchema, newSchema, Config(anyOfReordering = FORBIDDEN)).shouldHaveErrors()
       }
 
       Then("Should not have errors if allowReorder is true") {
-        Validator.validate(oldSchema, newSchema, Config(reorder = ALLOWED)).shouldNotHaveErrors()
+        Validator.validate(oldSchema, newSchema, Config(anyOfReordering = ALLOWED)).shouldNotHaveErrors()
       }
     }
 
@@ -37,11 +37,11 @@ internal class AllowReorderTest : BehaviorSpec({
       )
 
       Then("Should have errors if allowReorder is false") {
-        Validator.validate(oldSchema, newSchema, Config(reorder = FORBIDDEN)).shouldHaveErrors()
+        Validator.validate(oldSchema, newSchema, Config(anyOfReordering = FORBIDDEN)).shouldHaveErrors()
       }
 
       Then("Should have errors if allowReorder is true") {
-        Validator.validate(oldSchema, newSchema, Config(reorder = ALLOWED)).shouldHaveErrors()
+        Validator.validate(oldSchema, newSchema, Config(anyOfReordering = ALLOWED)).shouldHaveErrors()
       }
     }
   }
