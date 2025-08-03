@@ -6,19 +6,19 @@ data class ValidationResult(
   /**
    * These changes were allowed by the configuration.
    */
-  val info: MutableList<Any> = mutableListOf(),
+  val info: MutableList<String> = mutableListOf(),
 
   /**
    * These changes are discouraged but not forbidden by the configuration.
    */
-  val warnings: MutableList<Any> = mutableListOf(),
+  val warnings: MutableList<String> = mutableListOf(),
 
   /**
    * These changes are not allowed by the configuration.
    */
-  val errors: MutableList<Any> = mutableListOf(),
+  val errors: MutableList<String> = mutableListOf(),
 ) {
-  operator fun get(compatibility: Compatibility): MutableList<Any> {
+  operator fun get(compatibility: Compatibility): MutableList<String> {
     return when (compatibility) {
       Compatibility.ALLOWED -> info
       Compatibility.DISCOURAGED -> warnings
