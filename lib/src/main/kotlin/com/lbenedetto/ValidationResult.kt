@@ -6,19 +6,19 @@ data class ValidationResult(
   /**
    * These changes were allowed by the configuration.
    */
-  val info: MutableList<JsonNode> = mutableListOf(),
+  val info: MutableList<Any> = mutableListOf(),
 
   /**
    * These changes are discouraged but not forbidden by the configuration.
    */
-  val warnings: MutableList<JsonNode> = mutableListOf(),
+  val warnings: MutableList<Any> = mutableListOf(),
 
   /**
    * These changes are not allowed by the configuration.
    */
-  val errors: MutableList<JsonNode> = mutableListOf(),
+  val errors: MutableList<Any> = mutableListOf(),
 ) {
-  operator fun get(compatibility: Compatibility): MutableList<JsonNode> {
+  operator fun get(compatibility: Compatibility): MutableList<Any> {
     return when (compatibility) {
       Compatibility.ALLOWED -> info
       Compatibility.DISCOURAGED -> warnings

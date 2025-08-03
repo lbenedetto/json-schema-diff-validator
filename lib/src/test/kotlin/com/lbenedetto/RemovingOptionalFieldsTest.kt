@@ -9,7 +9,7 @@ import io.kotest.property.Exhaustive
 import io.kotest.property.checkAll
 import io.kotest.property.exhaustive.enum
 
-internal class AllowRemovingOptionalFields : BehaviorSpec({
+internal class RemovingOptionalFieldsTest : BehaviorSpec({
 
   Given("A schema") {
     val oldSchema = Util.readSchema("ExampleObject.schema")
@@ -22,11 +22,14 @@ internal class AllowRemovingOptionalFields : BehaviorSpec({
           Validator.validate(oldSchema, newSchema, config) shouldHaveDiffCorrectlySortedTo compatibility
         }
       }
+    }
 
-      When("removingOptionalFields is $compatibility and a required field is removed") {
+    checkAll(Exhaustive.enum<Compatibility>()) { compatibility ->
+      val config = Config(removingRequiredFields = compatibility)
+      When("removingRequiredFields is $compatibility and a required field is removed") {
         val newSchema = oldSchema.withPatches(remove("/properties/fieldWhichReferencesRequiredTypeDef"))
-        Then("Patch node should be sorted to FORBIDDEN") {
-          Validator.validate(oldSchema, newSchema, config) shouldHaveDiffCorrectlySortedTo Compatibility.FORBIDDEN
+        Then("Patch node should be sorted to $compatibility") {
+          Validator.validate(oldSchema, newSchema, config) shouldHaveDiffCorrectlySortedTo compatibility
         }
       }
     }

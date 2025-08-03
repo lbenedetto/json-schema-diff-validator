@@ -2,12 +2,14 @@ package com.lbenedetto
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.flipkart.zjsonpatch.DiffFlags
 import com.flipkart.zjsonpatch.JsonDiff
 import com.flipkart.zjsonpatch.Operation
-import java.lang.IllegalStateException
 import java.nio.file.Paths
-import java.util.EnumSet
+import java.util.*
+import kotlin.collections.any
+import kotlin.collections.sortedBy
 
 object Validator {
   val objectMapper = ObjectMapper()
@@ -17,161 +19,173 @@ object Validator {
   private const val PROPERTIES = "properties"
   private const val DEFINITIONS = "definitions"
 
-  /**
-   * Validates that the new schema is backward compatible with the old schema.
-   * Throws an IllegalStateException if the schemas are not compatible.
-   */
   fun validate(
     oldSchemaPath: String,
     newSchemaPath: String,
     config: Config = Config()
-  ) : ValidationResult {
+  ): ValidationResult {
     val oldSchema = objectMapper.readTree(Paths.get(oldSchemaPath).toFile())
     val newSchema = objectMapper.readTree(Paths.get(newSchemaPath).toFile())
 
     return validate(oldSchema, newSchema, config)
   }
 
-  /**
-   * Validates that the new schema is backward compatible with the old schema.
-   * Throws an IllegalStateException if the schemas are not compatible.
-   */
+  fun sortAllArrays(node: JsonNode) {
+    node.filter { it is ArrayNode }
+      .map { it as ArrayNode }
+      .forEach {
+        val sorted = it.toList().sortedBy { child -> child.toString() }
+        it.removeAll()
+        it.addAll(sorted)
+      }
+  }
+
+
   fun validate(
     oldSchema: JsonNode,
     newSchema: JsonNode,
     config: Config = Config()
   ): ValidationResult {
-    val diff = JsonDiff.asJson(oldSchema, newSchema, EnumSet.of(DiffFlags.OMIT_COPY_OPERATION))
+    // Presort the arrays so that JsonDiff doesn't get confused by re-ordered lists
+    sortAllArrays(oldSchema)
+    sortAllArrays(newSchema)
+
+    // Simplify the diff configuration to only emit ADD, REMOVE, and REPLACE operations
+    val diff = JsonDiff.asJson(
+      oldSchema, newSchema, EnumSet.of(
+        DiffFlags.OMIT_COPY_OPERATION,
+        DiffFlags.OMIT_MOVE_OPERATION,
+        DiffFlags.ADD_ORIGINAL_VALUE_ON_REPLACE
+      )
+    )
 
     val validationResult = ValidationResult()
-    // For tracking replaced and inserted items when allowReorder is true
-    val removed = mutableListOf<Pair<String, JsonNode>>()
-    val inserted = mutableListOf<String>()
+    // Json diff for re-ordered lists is complex, so we'll just keep track of every modified list
+    // And then do our own comparison between the old and new version of the list
+    val modifiedAnyOfPaths = mutableSetOf<String>()
+    val modifiedEnumPaths = mutableSetOf<String>()
+    val modifiedRequiredPaths = mutableSetOf<String>()
+    val removedFieldPaths = mutableSetOf<String>()
+    val addedFieldPaths = mutableSetOf<String>()
+    val changedFieldPaths = mutableSetOf<String>()
+
+    val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
+    val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
+    val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
 
     diff.forEach { node ->
       val operation = Operation.fromRfcName(node["op"].asText())
       val path = node["path"].asText()
 
-      val isMinItems = path.endsWith("minItems")
+      if (path.matches(modifiedAnyOfRegex)) {
+        modifiedAnyOfPaths.add(path.back())
+        return@forEach
+      } else if (path.matches(modifiedEnumRegex)) {
+        modifiedEnumPaths.add(path.back())
+        return@forEach
+      } else if (path.matches(modifiedRequiredRegex)) {
+        modifiedRequiredPaths.add(path.back())
+        return@forEach
+      }
 
       when (operation) {
-        Operation.MOVE, Operation.REMOVE -> {
-          if (getSecondLastSubPath(path) == REQUIRED || isMinItems) {
-            // Skip required field removals and minItems changes
-            return@forEach
-          }
-
-          if (!isFieldRequired(oldSchema, path)) {
-            validationResult[config.removingOptionalFields].add(node)
-            return@forEach
-          }
-
-          validationResult[Compatibility.FORBIDDEN].add(node)
-        }
-
-        Operation.REPLACE -> {
-          val oldValue = getJsonNodeAtPath(oldSchema, path)
-          if (isMinItems && oldValue.isInt && oldValue.asInt() > node["value"].asInt()) {
-            // Skip decreasing minItems
-            return@forEach
-          } else if (config.anyOfReordering == Compatibility.ALLOWED) {
-            // Track for reordering check
-            val oldValueText = if (oldValue.isTextual) oldValue.asText() else oldValue.toString()
-            removed.add(Pair(oldValueText, node))
-            val newValueText = if (node["value"].isTextual) node["value"].asText() else node["value"].toString()
-            inserted.add(newValueText)
-          } else {
-            validationResult[config.anyOfReordering].add(node)
-          }
-        }
-
-        Operation.ADD -> {
-          val isNewAnyOfItem = path.matches(Regex(".*/anyOf/\\d+$"))
-          val isNewEnumValue = path.matches(Regex(".*/enum/\\d+$"))
-          val pathTwoLastLevels = getSecondLastSubPath(path)
-          val lastSubPath = getLastSubPath(path)
-
-          // Allow adding minimum field to properties when allowReorder is true
-          if (lastSubPath == "minimum") {
-            validationResult[config.anyOfReordering].add(node)
-            return@forEach
-          }
-
-          if (pathTwoLastLevels != PROPERTIES && pathTwoLastLevels != DEFINITIONS) {
-            if (isNewAnyOfItem && config.anyOfReordering == Compatibility.ALLOWED) {
-              val refValue = node["value"]["\$ref"].asText() ?: node["value"].toString()
-              inserted.add(refValue)
-            } else if (isNewAnyOfItem) {
-              validationResult[config.newAnyOf].add(node)
-              return@forEach
-            } else if(isNewEnumValue) {
-              validationResult[config.newEnumValue].add(node)
-              return@forEach
-            } else {
-              validationResult[Compatibility.FORBIDDEN].add(node)
-              return@forEach
-            }
-          }
-
-          if (pathTwoLastLevels == REQUIRED) {
-            validationResult[Compatibility.FORBIDDEN].add(node)
-            return@forEach
-          }
-        }
-        Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
+        Operation.REMOVE -> removedFieldPaths.add(path)
+        Operation.ADD -> addedFieldPaths.add(path)
+        Operation.REPLACE -> changedFieldPaths.add(path)
+        Operation.MOVE, Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
       }
     }
 
-    // When reordering is allowed, check that any removed item is also inserted somewhere else
-    if (config.anyOfReordering != Compatibility.FORBIDDEN) {
-      removed.filter { !inserted.contains(it.first) }
-        .forEach { validationResult[Compatibility.FORBIDDEN].add(it.second) }
+    modifiedAnyOfPaths.forEach { path ->
+      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
+      val newList = newSchema.withArray<ArrayNode>(path).toList()
+      val addedValues = newList - oldList
+      val removedValues = oldList - newList
+
+      if (addedValues.isNotEmpty()) {
+        addedValues.forEach { addedValue -> validationResult[config.addingAnyOf].add("Added anyOf $addedValue")}
+      }
+
+      if (removedValues.isNotEmpty()) {
+        removedValues.forEach { removedValue -> validationResult[config.removingAnyOf].add("Removed anyOf $removedValue") }
+      }
+    }
+
+    modifiedEnumPaths.forEach { path ->
+      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
+      val newList = newSchema.withArray<ArrayNode>(path).toList()
+      val addedValues = newList - oldList
+      val removedValues = oldList - newList
+
+      if (addedValues.isNotEmpty()) {
+        addedValues.forEach { addedValue -> validationResult[config.addingEnumValue].add("Added enumValue $addedValue")}
+      }
+
+      if (removedValues.isNotEmpty()) {
+        removedValues.forEach { removedValue -> validationResult[config.removingEnumValue].add("Removed enumValue $removedValue") }
+      }
+    }
+
+    modifiedRequiredPaths.forEach { path ->
+      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
+      val newList = newSchema.withArray<ArrayNode>(path).toList()
+      val addedValues = newList - oldList
+      val removedValues = oldList - newList
+
+      if (addedValues.isNotEmpty()) {
+        addedValues.forEach { addedValue -> validationResult[config.addingRequired].add("Added required $addedValue")}
+      }
+
+      if (removedValues.isNotEmpty()) {
+        removedValues.forEach { removedValue -> validationResult[config.removingRequired].add("Removed required $removedValue") }
+      }
+    }
+
+    addedFieldPaths.forEach { path ->
+      val fieldName = getLastSubPath(path)
+      val newFieldIsRequired = newSchema.at(path.back().back()).withArray<ArrayNode>("required")
+        .any { it.asText() == fieldName }
+      if (newFieldIsRequired) {
+        validationResult[config.addingRequiredFields].add("Added required field: $path")
+      } else {
+        validationResult[config.addingOptionalFields].add("Added optional field: $path")
+      }
+    }
+
+    removedFieldPaths.forEach { path ->
+      if (path.endsWith("minItems")) {
+        return@forEach // Always allow removing minItems
+      }
+      val fieldName = getLastSubPath(path)
+      val newFieldIsRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
+        .any { it.asText() == fieldName }
+      if (newFieldIsRequired) {
+        validationResult[config.removingRequiredFields].add("Removed required field: $path")
+      } else {
+        validationResult[config.removingOptionalFields].add("Removed optional field: $path")
+      }
+    }
+
+    changedFieldPaths.forEach { path ->
+      if (path.endsWith("minItems")) {
+        val oldValue = oldSchema.at(path).asInt()
+        val newValue = newSchema.at(path).asInt()
+        if (newValue > oldValue) {
+          validationResult[Compatibility.FORBIDDEN].add("Increased minItems: $path from $oldValue to $newValue")
+        }
+      } else {
+        validationResult[Compatibility.FORBIDDEN].add("Changed field: $path")
+      }
     }
 
     return validationResult
   }
 
   /**
-   * Gets the second last segment of a JSON path.
-   */
-  private fun getSecondLastSubPath(path: String): String {
-    val parts = path.split("/")
-    return if (parts.size >= 2) parts[parts.size - 2] else ""
-  }
-
-  /**
    * Gets the last segment of a JSON path.
    */
   private fun getLastSubPath(path: String): String {
-    val parts = path.split("/")
-    return if (parts.isNotEmpty()) parts.last() else ""
-  }
-
-  /**
-   * Gets the JSON node at the specified path.
-   */
-  private fun getJsonNodeAtPath(root: JsonNode, path: String): JsonNode {
-    val parts = path.split("/").filter { it.isNotEmpty() }
-    var current = root
-
-    for (part in parts) {
-      current = if (part.toIntOrNull() != null) {
-        current[part.toInt()]
-      } else {
-        current[part]
-      }
-    }
-
-    return current
-  }
-
-  private fun isFieldRequired(schema: JsonNode, fieldPath: String): Boolean {
-    if (getJsonNodeAtPath(schema, fieldPath.back()).isArray) {
-      return true
-    }
-    val fieldName = getLastSubPath(fieldPath)
-    val requiredArray = getJsonNodeAtPath(schema, fieldPath.back().back())[REQUIRED]
-    return requiredArray.any { it.asText() == fieldName }
+    return path.substringAfterLast("/")
   }
 
   private fun String.back(): String {
