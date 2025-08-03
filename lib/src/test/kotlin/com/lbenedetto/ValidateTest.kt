@@ -45,7 +45,7 @@ internal class ValidateTest : BehaviorSpec({
 
     When("A field is made required") {
       val newSchema = oldSchema.withPatches(
-        add("/required", jsonString("name"))
+        add("/required/-", jsonString("name"))
       )
 
       Then("An exception should be thrown") {
@@ -66,7 +66,7 @@ internal class ValidateTest : BehaviorSpec({
     When("A required field is added") {
       val newSchema = oldSchema.withPatches(
         add("/properties/newField", """{ "type": "string" }"""),
-        add("/required", jsonString("newField"))
+        add("/required/-", jsonString("newField"))
       )
 
       Then("An exception should be thrown") {
@@ -77,7 +77,7 @@ internal class ValidateTest : BehaviorSpec({
     When("A required field is added to a subnode") {
       val newSchema = oldSchema.withPatches(
         add("/\$defs/SomePojo/properties/newField", """{ "type": "string" }"""),
-        add("/\$defs/SomePojo/required", jsonString("newField"))
+        add("/\$defs/SomePojo/required/-", jsonString("newField"))
       )
 
       Then("An exception should be thrown") {
@@ -88,11 +88,21 @@ internal class ValidateTest : BehaviorSpec({
     When("A required field is added to a subnode in an anyOf") {
       val newSchema = oldSchema.withPatches(
         add("/properties/fieldWithAnyOf/anyOf/1/properties/newField", """{ "type": "string" }"""),
-        add("/properties/fieldWithAnyOf/anyOf/1/required", jsonString("newField"))
+        add("/properties/fieldWithAnyOf/anyOf/1/required/-", jsonString("newField"))
       )
 
       Then("Should have errors") {
         Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      }
+    }
+
+    When("A optional field is added to a subnode in an anyOf") {
+      val newSchema = oldSchema.withPatches(
+        add("/properties/fieldWithAnyOf/anyOf/1/properties/newField", """{ "type": "string" }"""),
+      )
+
+      Then("Should have errors") {
+        Validator.validate(oldSchema, newSchema).shouldNotHaveErrors()
       }
     }
   }

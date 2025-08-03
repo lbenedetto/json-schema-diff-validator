@@ -1,5 +1,6 @@
 package com.lbenedetto.util
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.flipkart.zjsonpatch.JsonPatch
 import com.lbenedetto.Compatibility
@@ -9,21 +10,24 @@ import io.kotest.matchers.Matcher
 import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldNot
-import io.kotest.matchers.string.haveLength
 import io.kotest.property.Exhaustive
 import io.kotest.property.exhaustive.exhaustive
 import org.intellij.lang.annotations.Language
 import java.nio.file.Paths
 
 object Util {
-  fun ObjectNode.withPatches(@Language("JSON") vararg patches: String): ObjectNode {
-    val patch = Validator.objectMapper.readTree(
+  fun toDiffNode(@Language("JSON") vararg patches: String): JsonNode {
+    return Validator.objectMapper.readTree(
       """
       [
         ${patches.joinToString(separator = ",") { it.trimIndent() }}
       ]
     """.trimIndent()
     )
+  }
+
+  fun ObjectNode.withPatches(@Language("JSON") vararg patches: String): ObjectNode {
+    val patch = toDiffNode(*patches)
     return JsonPatch.apply(patch, this.deepCopy()) as ObjectNode
   }
 
