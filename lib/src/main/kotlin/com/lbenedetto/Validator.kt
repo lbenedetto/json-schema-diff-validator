@@ -156,9 +156,9 @@ object Validator {
         return@forEach // Always allow removing minItems
       }
       val fieldName = getLastSubPath(path)
-      val newFieldWasRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
+      val removedFieldWasRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
         .any { it.asText() == fieldName }
-      if (newFieldWasRequired) {
+      if (removedFieldWasRequired) {
         validationResult[config.removingRequiredFields].add("Removed a field $fieldName at $path which was previously required")
       } else {
         validationResult[config.removingOptionalFields].add("Removed a field $fieldName at $path which was previously optional")
@@ -171,6 +171,8 @@ object Validator {
         val newValue = newSchema.at(path).asInt()
         if (newValue > oldValue) {
           validationResult[Compatibility.FORBIDDEN].add("Increased minItems from $oldValue to $newValue at $path")
+        } else {
+          validationResult[Compatibility.ALLOWED].add("Decreased minItems from $oldValue to $newValue at $path")
         }
       } else {
         val oldValue = oldSchema.at(path).toPrettyString()

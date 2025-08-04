@@ -1,15 +1,15 @@
 package com.lbenedetto
 
+import com.lbenedetto.Compatibility.ALLOWED
+import com.lbenedetto.Compatibility.FORBIDDEN
 import com.lbenedetto.util.PatchDSL.add
 import com.lbenedetto.util.PatchDSL.jsonString
 import com.lbenedetto.util.PatchDSL.remove
 import com.lbenedetto.util.PatchDSL.replace
 import com.lbenedetto.util.Util
-import com.lbenedetto.util.Util.shouldHaveErrors
-import com.lbenedetto.util.Util.shouldNotHaveErrors
 import com.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import org.junit.jupiter.api.assertDoesNotThrow
+import io.kotest.matchers.shouldBe
 
 internal class ValidateTest : BehaviorSpec({
   Given("A schema") {
@@ -18,8 +18,8 @@ internal class ValidateTest : BehaviorSpec({
     When("Schema is the same") {
       val newSchema = oldSchema.deepCopy()
 
-      Then("Should not throw an exception") {
-        assertDoesNotThrow { Validator.validate(oldSchema, newSchema) }
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult()
       }
     }
 
@@ -28,8 +28,10 @@ internal class ValidateTest : BehaviorSpec({
         replace("/properties/someIntegerField/type", jsonString("string"))
       )
 
-      Then("An exception should be thrown") {
-        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
+          forbidden = mutableListOf("Changed field at /properties/someIntegerField/type from: \"integer\" to: \"string\"")
+        )
       }
     }
 
@@ -38,8 +40,10 @@ internal class ValidateTest : BehaviorSpec({
         remove("/required/0")
       )
 
-      Then("Should not throw an exception") {
-        Validator.validate(oldSchema, newSchema).shouldNotHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(removingRequired = ALLOWED)) shouldBe ValidationResult(
+          allowed = mutableListOf("Removed non-null requirement for \"fieldWhichReferencesRequiredTypeDef\" from /required"),
+        )
       }
     }
 
@@ -48,8 +52,10 @@ internal class ValidateTest : BehaviorSpec({
         add("/required/-", jsonString("name"))
       )
 
-      Then("An exception should be thrown") {
-        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingRequired = FORBIDDEN)) shouldBe ValidationResult(
+          forbidden = mutableListOf("Added non-null requirement for \"name\" to /required"),
+        )
       }
     }
 
@@ -58,8 +64,10 @@ internal class ValidateTest : BehaviorSpec({
         add("/properties/newField", """{ "type": "string" }"""),
       )
 
-      Then("No exception should be thrown") {
-        Validator.validate(oldSchema, newSchema).shouldNotHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
+          allowed = mutableListOf("Added new optional field newField at /properties/newField"),
+        )
       }
     }
 
@@ -69,8 +77,13 @@ internal class ValidateTest : BehaviorSpec({
         add("/required/-", jsonString("newField"))
       )
 
-      Then("An exception should be thrown") {
-        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
+          forbidden = mutableListOf(
+            "Added non-null requirement for \"newField\" to /required",
+            "Added new required field newField at /properties/newField"
+          ),
+        )
       }
     }
 
@@ -80,8 +93,13 @@ internal class ValidateTest : BehaviorSpec({
         add("/\$defs/SomePojo/required/-", jsonString("newField"))
       )
 
-      Then("An exception should be thrown") {
-        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
+          forbidden = mutableListOf(
+            "Added non-null requirement for \"newField\" to /\$defs/SomePojo/required",
+            "Added new required field newField at /\$defs/SomePojo/properties/newField"
+          ),
+        )
       }
     }
 
@@ -91,8 +109,13 @@ internal class ValidateTest : BehaviorSpec({
         add("/properties/fieldWithAnyOf/anyOf/1/required/-", jsonString("newField"))
       )
 
-      Then("Should have errors") {
-        Validator.validate(oldSchema, newSchema).shouldHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
+          forbidden = mutableListOf(
+            "Added non-null requirement for \"newField\" to /properties/fieldWithAnyOf/anyOf/1/required",
+            "Added new required field newField at /properties/fieldWithAnyOf/anyOf/1/properties/newField"
+          ),
+        )
       }
     }
 
@@ -101,8 +124,10 @@ internal class ValidateTest : BehaviorSpec({
         add("/properties/fieldWithAnyOf/anyOf/1/properties/newField", """{ "type": "string" }"""),
       )
 
-      Then("Should have errors") {
-        Validator.validate(oldSchema, newSchema).shouldNotHaveErrors()
+      Then("Change should be detected") {
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
+          allowed = mutableListOf("Added new optional field newField at /properties/fieldWithAnyOf/anyOf/1/properties/newField"),
+        )
       }
     }
   }
