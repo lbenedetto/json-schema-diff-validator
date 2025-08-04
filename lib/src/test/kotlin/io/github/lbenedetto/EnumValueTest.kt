@@ -1,12 +1,12 @@
-package com.lbenedetto
+package io.github.lbenedetto
 
-import com.lbenedetto.Compatibility.ALLOWED
-import com.lbenedetto.Compatibility.FORBIDDEN
-import com.lbenedetto.util.PatchDSL.add
-import com.lbenedetto.util.PatchDSL.jsonString
-import com.lbenedetto.util.PatchDSL.remove
-import com.lbenedetto.util.Util
-import com.lbenedetto.util.Util.withPatches
+import io.github.lbenedetto.Compatibility.ALLOWED
+import io.github.lbenedetto.Compatibility.FORBIDDEN
+import io.github.lbenedetto.util.PatchDSL.add
+import io.github.lbenedetto.util.PatchDSL.jsonString
+import io.github.lbenedetto.util.PatchDSL.remove
+import io.github.lbenedetto.util.Util
+import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 

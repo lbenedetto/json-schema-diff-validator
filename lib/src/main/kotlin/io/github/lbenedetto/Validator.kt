@@ -1,4 +1,4 @@
-package com.lbenedetto
+package io.github.lbenedetto
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper

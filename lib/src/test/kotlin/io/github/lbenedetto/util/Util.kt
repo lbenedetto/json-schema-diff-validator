@@ -1,9 +1,9 @@
-package com.lbenedetto.util
+package io.github.lbenedetto.util
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.flipkart.zjsonpatch.JsonPatch
-import com.lbenedetto.Validator
+import io.github.lbenedetto.Validator
 import org.intellij.lang.annotations.Language
 import java.nio.file.Paths
 

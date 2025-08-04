@@ -1,4 +1,4 @@
-package com.lbenedetto
+package io.github.lbenedetto
 
 data class ValidationResult(
   /**

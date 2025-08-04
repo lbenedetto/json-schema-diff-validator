@@ -1,4 +1,4 @@
-package com.lbenedetto.util
+package io.github.lbenedetto.util
 
 import org.intellij.lang.annotations.Language
 
