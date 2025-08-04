@@ -8,16 +8,9 @@ import com.flipkart.zjsonpatch.JsonDiff
 import com.flipkart.zjsonpatch.Operation
 import java.nio.file.Paths
 import java.util.*
-import kotlin.collections.any
-import kotlin.collections.sortedBy
 
 object Validator {
   val objectMapper = ObjectMapper()
-
-  // Path constants
-  private const val REQUIRED = "required"
-  private const val PROPERTIES = "properties"
-  private const val DEFINITIONS = "definitions"
 
   fun validate(
     oldSchemaPath: String,
@@ -83,13 +76,17 @@ object Validator {
         val removedValues = oldList - newList
 
         if (addedValues.isNotEmpty()) {
-          addedValues.forEach { addedValue -> validationResult[addingValuesCompatibility]
-            .add(addedErrorMessage(addedValue, path))}
+          addedValues.forEach { addedValue ->
+            validationResult[addingValuesCompatibility]
+              .add(addedErrorMessage(addedValue, path))
+          }
         }
 
         if (removedValues.isNotEmpty()) {
-          removedValues.forEach { removedValue -> validationResult[removingValuesCompatibility]
-            .add(removedErrorMessage(removedValue, path)) }
+          removedValues.forEach { removedValue ->
+            validationResult[removingValuesCompatibility]
+              .add(removedErrorMessage(removedValue, path))
+          }
         }
       }
     }
@@ -141,10 +138,13 @@ object Validator {
     )
 
     addedFieldPaths.forEach { path ->
+      if (newSchema.isMinItemsPath(path)) {
+        val value = newSchema.at(path).asInt()
+        validationResult[Compatibility.FORBIDDEN].add("Added minItems requirement of $value at $path")
+        return@forEach
+      }
       val fieldName = getLastSubPath(path)
-      val newFieldIsRequired = newSchema.at(path.back().back()).withArray<ArrayNode>("required")
-        .any { it.asText() == fieldName }
-      if (newFieldIsRequired) {
+      if (newSchema.isFieldRequired(path, fieldName)) {
         validationResult[config.addingRequiredFields].add("Added new required field $fieldName at $path")
       } else {
         validationResult[config.addingOptionalFields].add("Added new optional field $fieldName at $path")
@@ -152,13 +152,13 @@ object Validator {
     }
 
     removedFieldPaths.forEach { path ->
-      if (path.endsWith("minItems")) {
-        return@forEach // Always allow removing minItems
+      if (newSchema.isMinItemsPath(path)) {
+        val value = newSchema.at(path).asInt()
+        validationResult[Compatibility.ALLOWED].add("Removed minItems requirement of $value at $path")
+        return@forEach
       }
       val fieldName = getLastSubPath(path)
-      val removedFieldWasRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
-        .any { it.asText() == fieldName }
-      if (removedFieldWasRequired) {
+      if (oldSchema.isFieldRequired(path, fieldName)) {
         validationResult[config.removingRequiredFields].add("Removed a field $fieldName at $path which was previously required")
       } else {
         validationResult[config.removingOptionalFields].add("Removed a field $fieldName at $path which was previously optional")
@@ -166,7 +166,7 @@ object Validator {
     }
 
     changedFieldPaths.forEach { path ->
-      if (path.endsWith("minItems")) {
+      if (newSchema.isMinItemsPath(path)) {
         val oldValue = oldSchema.at(path).asInt()
         val newValue = newSchema.at(path).asInt()
         if (newValue > oldValue) {
@@ -193,5 +193,23 @@ object Validator {
 
   private fun String.back(): String {
     return substringBeforeLast("/")
+  }
+
+  private fun JsonNode.isFieldRequired(path: String, fieldName: String) : Boolean {
+    return at(path.back().back()).withArray<ArrayNode>("required")
+      .any { it.asText() == fieldName }
+  }
+
+  private fun JsonNode.isMinItemsPath(path: String): Boolean {
+    if (!path.endsWith("minItems")) {
+      return false
+    }
+    val parentNode = at(path.back())
+    if (!parentNode.has("type")) {
+      return false
+    }
+
+    val type = parentNode.get("type").asText()
+    return type == "array"
   }
 }

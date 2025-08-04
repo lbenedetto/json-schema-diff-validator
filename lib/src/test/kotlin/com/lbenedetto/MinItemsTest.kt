@@ -1,5 +1,7 @@
 package com.lbenedetto
 
+import com.lbenedetto.Compatibility.ALLOWED
+import com.lbenedetto.util.PatchDSL
 import com.lbenedetto.util.PatchDSL.remove
 import com.lbenedetto.util.PatchDSL.replace
 import com.lbenedetto.util.Util
@@ -17,7 +19,33 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult()
+        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
+          allowed = mutableListOf("Removed minItems requirement of 0 at /definitions/doc/properties/content/minItems")
+        )
+      }
+    }
+
+    When("minItems are added") {
+      val olderSchema = oldSchema.withPatches(
+        remove("/definitions/doc/properties/content/minItems")
+      )
+
+      Then("Change should be detected") {
+        Validator.validate(olderSchema, oldSchema) shouldBe ValidationResult(
+          forbidden = mutableListOf("Added minItems requirement of 1 at /definitions/doc/properties/content/minItems")
+        )
+      }
+    }
+
+    When("A new field named minItems is added") {
+      val newSchema = oldSchema.withPatches(
+        PatchDSL.add("/definitions/doc/properties/minItems", """{ "type": "integer" }"""),
+      )
+
+      Then("Validator should detect it as a new field, not as a new minItems requirement") {
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
+          allowed = mutableListOf("Added new optional field minItems at /definitions/doc/properties/minItems"),
+        )
       }
     }
 
