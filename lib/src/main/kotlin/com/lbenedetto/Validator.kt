@@ -69,6 +69,31 @@ object Validator {
     val addedFieldPaths = mutableSetOf<String>()
     val changedFieldPaths = mutableSetOf<String>()
 
+    fun handleModifiedArray(
+      modifiedPaths: Set<String>,
+      addingValuesCompatibility: Compatibility,
+      removingValuesCompatibility: Compatibility,
+      addedErrorMessage: (JsonNode, String) -> String,
+      removedErrorMessage: (JsonNode, String) -> String
+    ) {
+      modifiedPaths.forEach { path ->
+        val oldList = oldSchema.withArray<ArrayNode>(path).toList()
+        val newList = newSchema.withArray<ArrayNode>(path).toList()
+        val addedValues = newList - oldList
+        val removedValues = oldList - newList
+
+        if (addedValues.isNotEmpty()) {
+          addedValues.forEach { addedValue -> validationResult[addingValuesCompatibility]
+            .add(addedErrorMessage(addedValue, path))}
+        }
+
+        if (removedValues.isNotEmpty()) {
+          removedValues.forEach { removedValue -> validationResult[removingValuesCompatibility]
+            .add(removedErrorMessage(removedValue, path)) }
+        }
+      }
+    }
+
     val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
     val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
     val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
@@ -79,76 +104,50 @@ object Validator {
 
       if (path.matches(modifiedAnyOfRegex)) {
         modifiedAnyOfPaths.add(path.back())
-        return@forEach
       } else if (path.matches(modifiedEnumRegex)) {
         modifiedEnumPaths.add(path.back())
-        return@forEach
       } else if (path.matches(modifiedRequiredRegex)) {
         modifiedRequiredPaths.add(path.back())
-        return@forEach
-      }
-
-      when (operation) {
-        Operation.REMOVE -> removedFieldPaths.add(path)
-        Operation.ADD -> addedFieldPaths.add(path)
-        Operation.REPLACE -> changedFieldPaths.add(path)
-        Operation.MOVE, Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
-      }
-    }
-
-    modifiedAnyOfPaths.forEach { path ->
-      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
-      val newList = newSchema.withArray<ArrayNode>(path).toList()
-      val addedValues = newList - oldList
-      val removedValues = oldList - newList
-
-      if (addedValues.isNotEmpty()) {
-        addedValues.forEach { addedValue -> validationResult[config.addingAnyOf].add("Added anyOf $addedValue")}
-      }
-
-      if (removedValues.isNotEmpty()) {
-        removedValues.forEach { removedValue -> validationResult[config.removingAnyOf].add("Removed anyOf $removedValue") }
+      } else {
+        when (operation) {
+          Operation.REMOVE -> removedFieldPaths.add(path)
+          Operation.ADD -> addedFieldPaths.add(path)
+          Operation.REPLACE -> changedFieldPaths.add(path)
+          Operation.MOVE, Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
+        }
       }
     }
 
-    modifiedEnumPaths.forEach { path ->
-      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
-      val newList = newSchema.withArray<ArrayNode>(path).toList()
-      val addedValues = newList - oldList
-      val removedValues = oldList - newList
-
-      if (addedValues.isNotEmpty()) {
-        addedValues.forEach { addedValue -> validationResult[config.addingEnumValue].add("Added enumValue $addedValue")}
-      }
-
-      if (removedValues.isNotEmpty()) {
-        removedValues.forEach { removedValue -> validationResult[config.removingEnumValue].add("Removed enumValue $removedValue") }
-      }
-    }
-
-    modifiedRequiredPaths.forEach { path ->
-      val oldList = oldSchema.withArray<ArrayNode>(path).toList()
-      val newList = newSchema.withArray<ArrayNode>(path).toList()
-      val addedValues = newList - oldList
-      val removedValues = oldList - newList
-
-      if (addedValues.isNotEmpty()) {
-        addedValues.forEach { addedValue -> validationResult[config.addingRequired].add("Added required $addedValue")}
-      }
-
-      if (removedValues.isNotEmpty()) {
-        removedValues.forEach { removedValue -> validationResult[config.removingRequired].add("Removed required $removedValue") }
-      }
-    }
+    handleModifiedArray(
+      modifiedPaths = modifiedAnyOfPaths,
+      addingValuesCompatibility = config.addingAnyOf,
+      removingValuesCompatibility = config.removingAnyOf,
+      addedErrorMessage = { addedValue, path -> "Added new anyOf $addedValue to $path" },
+      removedErrorMessage = { removedValue, path -> "Removed anyOf $removedValue from $path" }
+    )
+    handleModifiedArray(
+      modifiedPaths = modifiedEnumPaths,
+      addingValuesCompatibility = config.addingEnumValue,
+      removingValuesCompatibility = config.removingEnumValue,
+      addedErrorMessage = { addedValue, path -> "Added new enum value $addedValue to $path" },
+      removedErrorMessage = { removedValue, path -> "Removed enum value $removedValue from $path" }
+    )
+    handleModifiedArray(
+      modifiedPaths = modifiedRequiredPaths,
+      addingValuesCompatibility = config.addingRequired,
+      removingValuesCompatibility = config.removingRequired,
+      addedErrorMessage = { addedValue, path -> "Added non-null requirement for $addedValue to $path" },
+      removedErrorMessage = { removedValue, path -> "Removed non-null requirement for $removedValue from $path" }
+    )
 
     addedFieldPaths.forEach { path ->
       val fieldName = getLastSubPath(path)
       val newFieldIsRequired = newSchema.at(path.back().back()).withArray<ArrayNode>("required")
         .any { it.asText() == fieldName }
       if (newFieldIsRequired) {
-        validationResult[config.addingRequiredFields].add("Added required field: $path")
+        validationResult[config.addingRequiredFields].add("Added new required field $fieldName at $path")
       } else {
-        validationResult[config.addingOptionalFields].add("Added optional field: $path")
+        validationResult[config.addingOptionalFields].add("Added new optional field $fieldName at $path")
       }
     }
 
@@ -157,12 +156,12 @@ object Validator {
         return@forEach // Always allow removing minItems
       }
       val fieldName = getLastSubPath(path)
-      val newFieldIsRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
+      val newFieldWasRequired = oldSchema.at(path.back().back()).withArray<ArrayNode>("required")
         .any { it.asText() == fieldName }
-      if (newFieldIsRequired) {
-        validationResult[config.removingRequiredFields].add("Removed required field: $path")
+      if (newFieldWasRequired) {
+        validationResult[config.removingRequiredFields].add("Removed a field $fieldName at $path which was previously required")
       } else {
-        validationResult[config.removingOptionalFields].add("Removed optional field: $path")
+        validationResult[config.removingOptionalFields].add("Removed a field $fieldName at $path which was previously optional")
       }
     }
 
@@ -171,10 +170,12 @@ object Validator {
         val oldValue = oldSchema.at(path).asInt()
         val newValue = newSchema.at(path).asInt()
         if (newValue > oldValue) {
-          validationResult[Compatibility.FORBIDDEN].add("Increased minItems: $path from $oldValue to $newValue")
+          validationResult[Compatibility.FORBIDDEN].add("Increased minItems from $oldValue to $newValue at $path")
         }
       } else {
-        validationResult[Compatibility.FORBIDDEN].add("Changed field: $path")
+        val oldValue = oldSchema.at(path).toPrettyString()
+        val newValue = newSchema.at(path).toPrettyString()
+        validationResult[Compatibility.FORBIDDEN].add("Changed field at $path from: $oldValue to: $newValue")
       }
     }
 
