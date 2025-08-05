@@ -3,9 +3,11 @@ package io.github.lbenedetto
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.TextNode
 import com.flipkart.zjsonpatch.DiffFlags
 import com.flipkart.zjsonpatch.JsonDiff
 import com.flipkart.zjsonpatch.Operation
+import io.github.lbenedetto.jsonschema.AnyOfSimpleType
 import java.nio.file.Paths
 import java.util.*
 
@@ -65,6 +67,7 @@ object Validator {
     val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
     val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
     val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
+    val plainFieldTypeRegex = Regex(".*/properties/.*?/type$")
 
     diff.forEach { node ->
       val operation = Operation.fromRfcName(node["op"].asText())
@@ -89,10 +92,18 @@ object Validator {
     modifiedAnyOfPaths.forEach { path ->
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
       arrayDiff.added.forEach { addedValue ->
-        validationResult[config.addingAnyOf].add("Added new anyOf $addedValue to $path")
+        if (addedValue.isNullType()) {
+          validationResult[config.removingRequired].add("Added null option to anyOf at $path")
+        } else {
+          validationResult[config.addingAnyOf].add("Added new anyOf $addedValue to $path")
+        }
       }
       arrayDiff.removed.forEach { removedValue ->
-        validationResult[config.removingAnyOf].add("Removed anyOf $removedValue from $path")
+        if (removedValue.isNullType()) {
+          validationResult[config.addingRequired].add("Removed null option from anyOf at $path")
+        } else {
+          validationResult[config.removingAnyOf].add("Removed anyOf $removedValue from $path")
+        }
       }
     }
     modifiedEnumPaths.forEach { path ->
@@ -151,6 +162,20 @@ object Validator {
         } else {
           validationResult[Compatibility.ALLOWED].add("Decreased minItems from $oldValue to $newValue at $path")
         }
+      } else if (path.matches(plainFieldTypeRegex)) {
+        val oldType = oldSchema.resolveSimpleType(path)
+        val newType = newSchema.resolveSimpleType(path)
+        val changeCompatibility = if (newType.isNullable() && !oldType.isNullable()) {
+          config.removingRequired
+        } else if (!newType.isNullable() && oldType.isNullable()) {
+          config.addingRequired
+        } else if (newType.ignoringNull() != oldType.ignoringNull()) {
+          Compatibility.FORBIDDEN
+        } else {
+          Compatibility.ALLOWED
+        }
+
+        validationResult[changeCompatibility].add("Changed field type from $oldType to $newType at $path")
       } else {
         val oldValue = oldSchema.at(path).toString()
         val newValue = newSchema.at(path).toString()
@@ -159,6 +184,14 @@ object Validator {
     }
 
     return validationResult
+  }
+
+  private fun JsonNode.resolveSimpleType(path: String): AnyOfSimpleType {
+    return when (val typeNode = at(path)) {
+      is ArrayNode -> AnyOfSimpleType(typeNode.map { it.textValue() })
+      is TextNode -> AnyOfSimpleType(listOf(typeNode.textValue()))
+      else -> throw IllegalStateException("Unexpected type node: $typeNode")
+    }
   }
 
   /**
@@ -189,6 +222,8 @@ object Validator {
     val type = parentNode.get("type").asText()
     return type == "array"
   }
+
+  private fun JsonNode.isNullType() = has("type") && get("type").asText() == "null"
 
   data class ArrayDiff(val added: Set<JsonNode>, val removed: Set<JsonNode>)
 
