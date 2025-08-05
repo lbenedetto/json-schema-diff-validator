@@ -51,14 +51,14 @@ Usage with custom configuration:
 ```kotlin
 // Custom configuration
 val result = Validator.validate(oldSchemaPath, newSchemaPath, Config(
-  addingRequiredFields = Compatibility.DISCOURAGED
+  addingRequired = Compatibility.DISCOURAGED
 ))
 ```
 
 Java usage with custom configuration:
 ```java
 var result = Validator.validate(oldSchemaPath, newSchemaPath, Config.defaultConfig()
-    .makingFieldsRequired(Compatibility.DISCOURAGED));
+    .addingRequired(Compatibility.DISCOURAGED));
 ```
 
 ### Dependencies
