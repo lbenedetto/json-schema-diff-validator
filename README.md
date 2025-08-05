@@ -57,7 +57,7 @@ val result = Validator.validate(oldSchemaPath, newSchemaPath, Config(
 
 Java usage with custom configuration:
 ```java
-var result = Validator.validate(oldSchemaPath, newSchemaPath, new Config()
+var result = Validator.validate(oldSchemaPath, newSchemaPath, Config.defaultConfig()
     .makingFieldsRequired(Compatibility.DISCOURAGED));
 ```
 
