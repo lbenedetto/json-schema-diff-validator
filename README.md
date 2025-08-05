@@ -51,11 +51,7 @@ Usage with custom configuration:
 ```kotlin
 // Custom configuration
 val result = Validator.validate(oldSchemaPath, newSchemaPath, Config(
-  newAnyOf = Compatibility.ALLOWED,
-  newEnumValue = Compatibility.ALLOWED,
-  reorder = Compatibility.ALLOWED,
-  removingOptionalFields = Compatibility.ALLOWED,
-  makingFieldsRequired = Compatibility.DISCOURAGED
+  addingRequiredFields = Compatibility.DISCOURAGED
 ))
 ```
 
