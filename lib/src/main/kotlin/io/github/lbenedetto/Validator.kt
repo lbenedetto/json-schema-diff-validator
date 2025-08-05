@@ -62,35 +62,6 @@ object Validator {
     val addedFieldPaths = mutableSetOf<String>()
     val changedFieldPaths = mutableSetOf<String>()
 
-    fun handleModifiedArray(
-      modifiedPaths: Set<String>,
-      addingValuesCompatibility: Compatibility,
-      removingValuesCompatibility: Compatibility,
-      addedErrorMessage: (JsonNode, String) -> String,
-      removedErrorMessage: (JsonNode, String) -> String
-    ) {
-      modifiedPaths.forEach { path ->
-        val oldList = oldSchema.withArray<ArrayNode>(path).toList()
-        val newList = newSchema.withArray<ArrayNode>(path).toList()
-        val addedValues = newList - oldList
-        val removedValues = oldList - newList
-
-        if (addedValues.isNotEmpty()) {
-          addedValues.forEach { addedValue ->
-            validationResult[addingValuesCompatibility]
-              .add(addedErrorMessage(addedValue, path))
-          }
-        }
-
-        if (removedValues.isNotEmpty()) {
-          removedValues.forEach { removedValue ->
-            validationResult[removingValuesCompatibility]
-              .add(removedErrorMessage(removedValue, path))
-          }
-        }
-      }
-    }
-
     val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
     val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
     val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
@@ -115,27 +86,33 @@ object Validator {
       }
     }
 
-    handleModifiedArray(
-      modifiedPaths = modifiedAnyOfPaths,
-      addingValuesCompatibility = config.addingAnyOf,
-      removingValuesCompatibility = config.removingAnyOf,
-      addedErrorMessage = { addedValue, path -> "Added new anyOf $addedValue to $path" },
-      removedErrorMessage = { removedValue, path -> "Removed anyOf $removedValue from $path" }
-    )
-    handleModifiedArray(
-      modifiedPaths = modifiedEnumPaths,
-      addingValuesCompatibility = config.addingEnumValue,
-      removingValuesCompatibility = config.removingEnumValue,
-      addedErrorMessage = { addedValue, path -> "Added new enum value $addedValue to $path" },
-      removedErrorMessage = { removedValue, path -> "Removed enum value $removedValue from $path" }
-    )
-    handleModifiedArray(
-      modifiedPaths = modifiedRequiredPaths,
-      addingValuesCompatibility = config.addingRequired,
-      removingValuesCompatibility = config.removingRequired,
-      addedErrorMessage = { addedValue, path -> "Added non-null requirement for $addedValue to $path" },
-      removedErrorMessage = { removedValue, path -> "Removed non-null requirement for $removedValue from $path" }
-    )
+    modifiedAnyOfPaths.forEach { path ->
+      val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
+      arrayDiff.added.forEach { addedValue ->
+        validationResult[config.addingAnyOf].add("Added new anyOf $addedValue to $path")
+      }
+      arrayDiff.removed.forEach { removedValue ->
+        validationResult[config.removingAnyOf].add("Removed anyOf $removedValue from $path")
+      }
+    }
+    modifiedEnumPaths.forEach { path ->
+      val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
+      arrayDiff.added.forEach { addedValue ->
+        validationResult[config.addingEnumValue].add("Added new enum value $addedValue to $path")
+      }
+      arrayDiff.removed.forEach { removedValue ->
+        validationResult[config.removingEnumValue].add("Removed enum value $removedValue from $path")
+      }
+    }
+    modifiedRequiredPaths.forEach { path ->
+      val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
+      arrayDiff.added.forEach { addedValue ->
+        validationResult[config.addingRequired].add("Added non-null requirement for $addedValue to $path")
+      }
+      arrayDiff.removed.forEach { removedValue ->
+        validationResult[config.removingRequired].add("Removed non-null requirement for $removedValue from $path")
+      }
+    }
 
     addedFieldPaths.forEach { path ->
       if (newSchema.isMinItemsPath(path)) {
@@ -175,8 +152,8 @@ object Validator {
           validationResult[Compatibility.ALLOWED].add("Decreased minItems from $oldValue to $newValue at $path")
         }
       } else {
-        val oldValue = oldSchema.at(path).toPrettyString()
-        val newValue = newSchema.at(path).toPrettyString()
+        val oldValue = oldSchema.at(path).toString()
+        val newValue = newSchema.at(path).toString()
         validationResult[Compatibility.FORBIDDEN].add("Changed field at $path from: $oldValue to: $newValue")
       }
     }
@@ -211,5 +188,16 @@ object Validator {
 
     val type = parentNode.get("type").asText()
     return type == "array"
+  }
+
+  data class ArrayDiff(val added: Set<JsonNode>, val removed: Set<JsonNode>)
+
+  private fun computeArrayDiff(oldSchema: JsonNode, newSchema: JsonNode, path: String): ArrayDiff {
+    val oldList = oldSchema.withArray<ArrayNode>(path).toSet()
+    val newList = newSchema.withArray<ArrayNode>(path).toSet()
+     return ArrayDiff(
+       added = newList - oldList,
+       removed = oldList - newList
+     )
   }
 }

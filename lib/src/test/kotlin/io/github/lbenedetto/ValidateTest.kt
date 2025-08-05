@@ -7,6 +7,8 @@ import io.github.lbenedetto.util.PatchDSL.jsonString
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.PatchDSL.replace
 import io.github.lbenedetto.util.Util
+import io.github.lbenedetto.util.Util.shouldAllow
+import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -29,9 +31,8 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
-          forbidden = mutableListOf("Changed field at /properties/someIntegerField/type from: \"integer\" to: \"string\"")
-        )
+        Validator.validate(oldSchema, newSchema)
+          .shouldForbid("Changed field at /properties/someIntegerField/type from: \"integer\" to: \"string\"")
       }
     }
 
@@ -41,9 +42,8 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(removingRequired = ALLOWED)) shouldBe ValidationResult(
-          allowed = mutableListOf("Removed non-null requirement for \"fieldWhichReferencesRequiredTypeDef\" from /required"),
-        )
+        Validator.validate(oldSchema, newSchema, Config(removingRequired = ALLOWED))
+          .shouldAllow("Removed non-null requirement for \"fieldWhichReferencesRequiredTypeDef\" from /required")
       }
     }
 
@@ -53,9 +53,8 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingRequired = FORBIDDEN)) shouldBe ValidationResult(
-          forbidden = mutableListOf("Added non-null requirement for \"name\" to /required"),
-        )
+        Validator.validate(oldSchema, newSchema, Config(addingRequired = FORBIDDEN))
+          .shouldForbid("Added non-null requirement for \"name\" to /required")
       }
     }
 
@@ -65,9 +64,8 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new optional field newField at /properties/newField"),
-        )
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED))
+          .shouldAllow("Added new optional field newField at /properties/newField")
       }
     }
 
@@ -78,12 +76,11 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
-          forbidden = mutableListOf(
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN))
+          .shouldForbid(
             "Added non-null requirement for \"newField\" to /required",
             "Added new required field newField at /properties/newField"
-          ),
-        )
+          )
       }
     }
 
@@ -94,12 +91,11 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
-          forbidden = mutableListOf(
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN))
+          .shouldForbid(
             "Added non-null requirement for \"newField\" to /\$defs/SomePojo/required",
             "Added new required field newField at /\$defs/SomePojo/properties/newField"
-          ),
-        )
+          )
       }
     }
 
@@ -110,12 +106,11 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN)) shouldBe ValidationResult(
-          forbidden = mutableListOf(
+        Validator.validate(oldSchema, newSchema, Config(addingRequiredFields = FORBIDDEN))
+          .shouldForbid(
             "Added non-null requirement for \"newField\" to /properties/fieldWithAnyOf/anyOf/1/required",
             "Added new required field newField at /properties/fieldWithAnyOf/anyOf/1/properties/newField"
-          ),
-        )
+          )
       }
     }
 
@@ -125,9 +120,8 @@ internal class ValidateTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new optional field newField at /properties/fieldWithAnyOf/anyOf/1/properties/newField"),
-        )
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED))
+          .shouldAllow("Added new optional field newField at /properties/fieldWithAnyOf/anyOf/1/properties/newField")
       }
     }
   }

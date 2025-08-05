@@ -7,9 +7,11 @@ import io.github.lbenedetto.util.PatchDSL.add
 import io.github.lbenedetto.util.PatchDSL.jsonObject
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.Util
+import io.github.lbenedetto.util.Util.shouldAllow
+import io.github.lbenedetto.util.Util.shouldDiscourage
+import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.shouldBe
 
 internal class AnyOfTest : BehaviorSpec({
   Given("A new anyOf element is added to the schema") {
@@ -21,9 +23,8 @@ internal class AnyOfTest : BehaviorSpec({
         add("/definitions/root/items/anyOf/1", """{"type": "number"}""")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new anyOf {\"type\":\"number\"} to /definitions/root/items/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldAllow("Added new anyOf {\"type\":\"number\"} to /definitions/root/items/anyOf")
       }
     }
 
@@ -32,9 +33,8 @@ internal class AnyOfTest : BehaviorSpec({
         add("/definitions/anotherItem/content/items/0/anyOf/1", """{"fruit": "pear"}""")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new anyOf {\"fruit\":\"pear\"} to /definitions/anotherItem/content/items/0/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldAllow("Added new anyOf {\"fruit\":\"pear\"} to /definitions/anotherItem/content/items/0/anyOf")
       }
     }
 
@@ -43,9 +43,8 @@ internal class AnyOfTest : BehaviorSpec({
         add("/definitions/inline_node/anyOf/1", jsonObject("\$ref" to "\"#/definitions/hardBreak_node\""))
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new anyOf {\"\$ref\":\"#/definitions/hardBreak_node\"} to /definitions/inline_node/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldAllow("Added new anyOf {\"\$ref\":\"#/definitions/hardBreak_node\"} to /definitions/inline_node/anyOf")
       }
     }
 
@@ -54,9 +53,8 @@ internal class AnyOfTest : BehaviorSpec({
         remove("/definitions/root/items/anyOf/0")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          forbidden = mutableListOf("Removed anyOf {\"type\":\"string\"} from /definitions/root/items/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldForbid("Removed anyOf {\"type\":\"string\"} from /definitions/root/items/anyOf")
       }
     }
 
@@ -65,9 +63,8 @@ internal class AnyOfTest : BehaviorSpec({
         remove("/definitions/anotherItem/content/items/0/anyOf/0")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          forbidden = mutableListOf("Removed anyOf {\"fruit\":\"banana\"} from /definitions/anotherItem/content/items/0/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldForbid("Removed anyOf {\"fruit\":\"banana\"} from /definitions/anotherItem/content/items/0/anyOf")
       }
     }
 
@@ -76,9 +73,8 @@ internal class AnyOfTest : BehaviorSpec({
         remove("/definitions/inline_node/anyOf/0")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          forbidden = mutableListOf("Removed anyOf {\"\$ref\":\"#/definitions/text_node\"} from /definitions/inline_node/anyOf")
-        )
+        Validator.validate(oldSchema, newSchema, config)
+          .shouldForbid("Removed anyOf {\"\$ref\":\"#/definitions/text_node\"} from /definitions/inline_node/anyOf")
       }
     }
   }
@@ -95,17 +91,19 @@ internal class AnyOfTest : BehaviorSpec({
       val newSchema = Validator.objectMapper.valueToTree<ObjectNode>(TestData(newList.map { TestRef(it) }))
       Then("There should be no errors") {
         val config = Config(addingAnyOf = ALLOWED, removingAnyOf = FORBIDDEN)
-        Validator.validate(oldSchema, newSchema, config) shouldBe ValidationResult(
-          allowed = mutableListOf(
-            "Added new anyOf {\"\$ref\":10} to /anyOf",
-            "Added new anyOf {\"\$ref\":20} to /anyOf",
-            "Added new anyOf {\"\$ref\":30} to /anyOf",
-            "Added new anyOf {\"\$ref\":40} to /anyOf",
-            "Added new anyOf {\"\$ref\":50} to /anyOf",
-          ),
-          forbidden = mutableListOf(
-            "Removed anyOf {\"\$ref\":9} from /anyOf"
-          )
+        val result = Validator.validate(oldSchema, newSchema, config)
+        result.shouldAllow(
+          "Added new anyOf {\"\$ref\":10} to /anyOf",
+          "Added new anyOf {\"\$ref\":20} to /anyOf",
+          "Added new anyOf {\"\$ref\":30} to /anyOf",
+          "Added new anyOf {\"\$ref\":40} to /anyOf",
+          "Added new anyOf {\"\$ref\":50} to /anyOf",
+          enforceOthersEmpty = false
+        )
+        result.shouldDiscourage(enforceOthersEmpty = false)
+        result.shouldForbid(
+          "Removed anyOf {\"\$ref\":9} from /anyOf",
+          enforceOthersEmpty = false
         )
       }
     }

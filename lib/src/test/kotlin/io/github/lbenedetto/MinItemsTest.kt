@@ -5,9 +5,10 @@ import io.github.lbenedetto.util.PatchDSL
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.PatchDSL.replace
 import io.github.lbenedetto.util.Util
+import io.github.lbenedetto.util.Util.shouldAllow
+import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.shouldBe
 
 internal class MinItemsTest : BehaviorSpec({
   Given("A schema with minItems") {
@@ -19,9 +20,8 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
-          allowed = mutableListOf("Removed minItems requirement of 0 at /definitions/doc/properties/content/minItems")
-        )
+        Validator.validate(oldSchema, newSchema)
+          .shouldAllow("Removed minItems requirement of 0 at /definitions/doc/properties/content/minItems")
       }
     }
 
@@ -31,9 +31,8 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(olderSchema, oldSchema) shouldBe ValidationResult(
-          forbidden = mutableListOf("Added minItems requirement of 1 at /definitions/doc/properties/content/minItems")
-        )
+        Validator.validate(olderSchema, oldSchema)
+          .shouldForbid("Added minItems requirement of 1 at /definitions/doc/properties/content/minItems")
       }
     }
 
@@ -43,9 +42,8 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Validator should detect it as a new field, not as a new minItems requirement") {
-        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED)) shouldBe ValidationResult(
-          allowed = mutableListOf("Added new optional field minItems at /definitions/doc/properties/minItems"),
-        )
+        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED))
+          .shouldAllow("Added new optional field minItems at /definitions/doc/properties/minItems")
       }
     }
 
@@ -55,9 +53,8 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
-          allowed = mutableListOf("Decreased minItems from 1 to 0 at /definitions/doc/properties/content/minItems")
-        )
+        Validator.validate(oldSchema, newSchema)
+          .shouldAllow("Decreased minItems from 1 to 0 at /definitions/doc/properties/content/minItems")
       }
     }
 
@@ -67,9 +64,8 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema) shouldBe ValidationResult(
-          forbidden = mutableListOf("Increased minItems from 1 to 10 at /definitions/doc/properties/content/minItems")
-        )
+        Validator.validate(oldSchema, newSchema)
+          .shouldForbid("Increased minItems from 1 to 10 at /definitions/doc/properties/content/minItems")
       }
     }
   }
