@@ -1,80 +1,45 @@
 package io.github.lbenedetto
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.github.lbenedetto.Compatibility.ALLOWED
-import io.github.lbenedetto.Compatibility.FORBIDDEN
+import io.github.lbenedetto.inspector.AnyOfChange
+import io.github.lbenedetto.inspector.ChangeType
+import io.github.lbenedetto.inspector.Inspector
+import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
 import io.github.lbenedetto.util.PatchDSL.jsonObject
+import io.github.lbenedetto.util.PatchDSL.node
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.Util
-import io.github.lbenedetto.util.Util.shouldAllow
-import io.github.lbenedetto.util.Util.shouldDiscourage
-import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 
 internal class AnyOfTest : BehaviorSpec({
-  Given("A new anyOf element is added to the schema") {
-    val oldSchema = Util.readSchema("data_options_allowAnyOf.schema")
-    val config = Config(addingAnyOf = ALLOWED, removingAnyOf = FORBIDDEN)
+  Given("A schema with an anyOf element") {
 
-    When("A new anyOf element is added for a field") {
+
+    When("A new anyOf element is added") {
+      val node = """{"type": "number"}"""
+      val oldSchema = Util.readSchema("ExampleObject.schema")
       val newSchema = oldSchema.withPatches(
-        add("/definitions/root/items/anyOf/1", """{"type": "number"}""")
+        add("/properties/fieldWithAnyOf/anyOf/-", node)
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldAllow("Added new anyOf {\"type\":\"number\"} to /definitions/root/items/anyOf")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          AnyOfChange("/properties/fieldWithAnyOf/anyOf", node(node), ChangeType.ADDED)
+        )
       }
     }
 
-    When("A new anyOf element is added for an array") {
+    When("An anyOf element is removed") {
+      val oldSchema = Util.readSchema("ExampleObject.schema")
       val newSchema = oldSchema.withPatches(
-        add("/definitions/anotherItem/content/items/0/anyOf/1", """{"fruit": "pear"}""")
+        remove("/properties/fieldWithAnyOf/anyOf/0")
       )
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldAllow("Added new anyOf {\"fruit\":\"pear\"} to /definitions/anotherItem/content/items/0/anyOf")
-      }
-    }
-
-    When("A new anyOf ref is added for a field") {
-      val newSchema = oldSchema.withPatches(
-        add("/definitions/inline_node/anyOf/1", jsonObject("\$ref" to "\"#/definitions/hardBreak_node\""))
-      )
-      Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldAllow("Added new anyOf {\"\$ref\":\"#/definitions/hardBreak_node\"} to /definitions/inline_node/anyOf")
-      }
-    }
-
-    When("An anyOf element is removed from a field") {
-      val newSchema = oldSchema.withPatches(
-        remove("/definitions/root/items/anyOf/0")
-      )
-      Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldForbid("Removed anyOf {\"type\":\"string\"} from /definitions/root/items/anyOf")
-      }
-    }
-
-    When("An anyOf element is removed from an array") {
-      val newSchema = oldSchema.withPatches(
-        remove("/definitions/anotherItem/content/items/0/anyOf/0")
-      )
-      Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldForbid("Removed anyOf {\"fruit\":\"banana\"} from /definitions/anotherItem/content/items/0/anyOf")
-      }
-    }
-
-    When("An anyOf ref is removed from a field") {
-      val newSchema = oldSchema.withPatches(
-        remove("/definitions/inline_node/anyOf/0")
-      )
-      Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, config)
-          .shouldForbid("Removed anyOf {\"\$ref\":\"#/definitions/text_node\"} from /definitions/inline_node/anyOf")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          AnyOfChange("/properties/fieldWithAnyOf/anyOf", node("""{"type":"boolean"}"""), ChangeType.REMOVED)
+        )
       }
     }
   }
@@ -87,23 +52,16 @@ internal class AnyOfTest : BehaviorSpec({
       data class TestRef(val `$ref`: Int)
       data class TestData(val anyOf: List<TestRef>)
 
-      val oldSchema = Validator.objectMapper.valueToTree<ObjectNode>(TestData(oldList.map { TestRef(it) }))
-      val newSchema = Validator.objectMapper.valueToTree<ObjectNode>(TestData(newList.map { TestRef(it) }))
+      val oldSchema = Inspector.objectMapper.valueToTree<ObjectNode>(TestData(oldList.map { TestRef(it) }))
+      val newSchema = Inspector.objectMapper.valueToTree<ObjectNode>(TestData(newList.map { TestRef(it) }))
       Then("There should be no errors") {
-        val config = Config(addingAnyOf = ALLOWED, removingAnyOf = FORBIDDEN)
-        val result = Validator.validate(oldSchema, newSchema, config)
-        result.shouldAllow(
-          "Added new anyOf {\"\$ref\":10} to /anyOf",
-          "Added new anyOf {\"\$ref\":20} to /anyOf",
-          "Added new anyOf {\"\$ref\":30} to /anyOf",
-          "Added new anyOf {\"\$ref\":40} to /anyOf",
-          "Added new anyOf {\"\$ref\":50} to /anyOf",
-          enforceOthersEmpty = false
-        )
-        result.shouldDiscourage(enforceOthersEmpty = false)
-        result.shouldForbid(
-          "Removed anyOf {\"\$ref\":9} from /anyOf",
-          enforceOthersEmpty = false
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "10")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "20")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "30")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "40")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "50")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "9")), ChangeType.REMOVED),
         )
       }
     }
