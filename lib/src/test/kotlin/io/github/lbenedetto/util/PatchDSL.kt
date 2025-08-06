@@ -1,5 +1,7 @@
 package io.github.lbenedetto.util
 
+import com.fasterxml.jackson.databind.JsonNode
+import io.github.lbenedetto.inspector.Inspector
 import org.intellij.lang.annotations.Language
 
 object PatchDSL {
@@ -41,5 +43,9 @@ object PatchDSL {
   fun jsonObject(vararg fields: Pair<String, String>): String {
     val jsonFields = fields.joinToString(", ") { "\"${it.first}\": ${it.second}" }
     return "{ $jsonFields }"
+  }
+
+  fun node(@Language("JSON") node: String) : JsonNode {
+    return Inspector.objectMapper.readTree(node)
   }
 }

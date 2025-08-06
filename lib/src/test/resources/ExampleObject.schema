@@ -20,37 +20,24 @@
   },
   "type" : "object",
   "properties" : {
-    "fieldWhichReferencesRequiredTypeDef" : {
+    "fieldWhichReferencesNonNullTypeDef" : {
       "$ref" : "#/$defs/SomePojo"
     },
     "fieldWhichReferencesNullableTypeDef" : {
       "$ref" : "#/$defs/SomePojo-nullable"
     },
-    "fieldWithAnyOf" : {
+    "nullableFieldWithAnyOf" : {
       "anyOf" : [ {
         "type" : "null"
       }, {
-        "type" : "object",
-        "properties" : {
-          "typeARequiredField" : {
-            "type" : "string"
-          },
-          "typeAOptionalField" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "typeARequiredField" ]
+        "type" : "integer"
+      } ]
+    },
+    "fieldWithAnyOf" : {
+      "anyOf" : [ {
+        "type" : "boolean"
       }, {
-        "type" : "object",
-        "properties" : {
-          "typeCRequiredField" : {
-            "type" : "string"
-          },
-          "typeCOptionalField" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "typeBRequiredField" ]
+        "type" : "integer"
       } ]
     },
     "listOfEnumValues" : {
@@ -87,5 +74,5 @@
       "type" : [ "integer", "null" ]
     }
   },
-  "required" : [ "fieldWhichReferencesRequiredTypeDef", "someIntegerField", "listOfEnumValues", "listOfObjects", "someEnumValue" ]
+  "required" : [ "someIntegerField", "listOfEnumValues", "listOfObjects", "someEnumValue" ]
 }

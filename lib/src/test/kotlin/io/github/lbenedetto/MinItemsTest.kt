@@ -1,14 +1,16 @@
 package io.github.lbenedetto
 
-import io.github.lbenedetto.Compatibility.ALLOWED
+import io.github.lbenedetto.inspector.ChangeType
+import io.github.lbenedetto.inspector.FieldChange
+import io.github.lbenedetto.inspector.Inspector
+import io.github.lbenedetto.inspector.MinItemsChange
 import io.github.lbenedetto.util.PatchDSL
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.PatchDSL.replace
 import io.github.lbenedetto.util.Util
-import io.github.lbenedetto.util.Util.shouldAllow
-import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 
 internal class MinItemsTest : BehaviorSpec({
   Given("A schema with minItems") {
@@ -20,8 +22,9 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema)
-          .shouldAllow("Removed minItems requirement of 0 at /definitions/doc/properties/content/minItems")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          MinItemsChange("/definitions/doc/properties/content/minItems", 1, null, ChangeType.REMOVED)
+        )
       }
     }
 
@@ -31,19 +34,21 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(olderSchema, oldSchema)
-          .shouldForbid("Added minItems requirement of 1 at /definitions/doc/properties/content/minItems")
+        Inspector.inspect(olderSchema, oldSchema).all().shouldContainExactlyInAnyOrder(
+          MinItemsChange("/definitions/doc/properties/content/minItems", null, 1, ChangeType.ADDED)
+        )
       }
     }
 
     When("A new field named minItems is added") {
       val newSchema = oldSchema.withPatches(
-        PatchDSL.add("/definitions/doc/properties/minItems", """{ "type": "integer" }"""),
+        PatchDSL.add("/definitions/doc/properties/minItems", """{ "type": ["integer","null"] }"""),
       )
 
       Then("Validator should detect it as a new field, not as a new minItems requirement") {
-        Validator.validate(oldSchema, newSchema, Config(addingOptionalFields = ALLOWED))
-          .shouldAllow("Added new optional field minItems at /definitions/doc/properties/minItems")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          FieldChange("/definitions/doc/properties", "minItems", ChangeType.ADDED)
+        )
       }
     }
 
@@ -53,8 +58,9 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema)
-          .shouldAllow("Decreased minItems from 1 to 0 at /definitions/doc/properties/content/minItems")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          MinItemsChange("/definitions/doc/properties/content/minItems", 1, 0, ChangeType.REMOVED)
+        )
       }
     }
 
@@ -64,8 +70,9 @@ internal class MinItemsTest : BehaviorSpec({
       )
 
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema)
-          .shouldForbid("Increased minItems from 1 to 10 at /definitions/doc/properties/content/minItems")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          MinItemsChange("/definitions/doc/properties/content/minItems", 1, 10, ChangeType.ADDED)
+        )
       }
     }
   }

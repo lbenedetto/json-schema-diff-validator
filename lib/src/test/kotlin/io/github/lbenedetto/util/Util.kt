@@ -3,10 +3,10 @@ package io.github.lbenedetto.util
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.flipkart.zjsonpatch.JsonPatch
-import io.github.lbenedetto.Compatibility
-import io.github.lbenedetto.Compatibility.*
-import io.github.lbenedetto.ValidationResult
-import io.github.lbenedetto.Validator
+import io.github.lbenedetto.validator.Risk
+import io.github.lbenedetto.validator.Risk.*
+import io.github.lbenedetto.inspector.Inspector
+import io.github.lbenedetto.validator.ValidationResult
 import io.kotest.assertions.print.print
 import io.kotest.matchers.Matcher
 import io.kotest.matchers.MatcherResult
@@ -17,7 +17,7 @@ import java.nio.file.Paths
 
 object Util {
   fun toDiffNode(@Language("JSON") vararg patches: String): JsonNode {
-    return Validator.objectMapper.readTree(
+    return Inspector.objectMapper.readTree(
       """
       [
         ${patches.joinToString(separator = ",") { it.trimIndent() }}
@@ -32,48 +32,48 @@ object Util {
   }
 
   fun readSchema(schemaPath: String): ObjectNode {
-    return Validator.objectMapper.readTree(Paths.get("src/test/resources/$schemaPath").toFile()) as ObjectNode
+    return Inspector.objectMapper.readTree(Paths.get("src/test/resources/$schemaPath").toFile()) as ObjectNode
   }
 
   fun ValidationResult.shouldAllow(vararg message: String, enforceOthersEmpty: Boolean = true) {
     if (enforceOthersEmpty) {
-      allowed shouldNot beEmpty(ALLOWED)
-      discouraged should beEmpty(DISCOURAGED)
-      forbidden should beEmpty(FORBIDDEN)
+      safe shouldNot beEmpty(SAFE)
+      risky should beEmpty(RISKY)
+      fatal should beEmpty(FATAL)
     }
-    allowed.shouldHaveNoDiff(ALLOWED, message.toSet())
+    safe.shouldHaveNoDiff(SAFE, message.toSet())
   }
 
   fun ValidationResult.shouldDiscourage(vararg message: String, enforceOthersEmpty: Boolean = true) {
     if (enforceOthersEmpty) {
-      allowed should beEmpty(ALLOWED)
-      discouraged shouldNot beEmpty(DISCOURAGED)
-      forbidden should beEmpty(FORBIDDEN)
+      safe should beEmpty(SAFE)
+      risky shouldNot beEmpty(RISKY)
+      fatal should beEmpty(FATAL)
     }
-    return discouraged.shouldHaveNoDiff(DISCOURAGED, message.toSet())
+    return risky.shouldHaveNoDiff(RISKY, message.toSet())
   }
 
   fun ValidationResult.shouldForbid(vararg message: String, enforceOthersEmpty: Boolean = true) {
     if (enforceOthersEmpty) {
-      allowed should beEmpty(ALLOWED)
-      discouraged should beEmpty(DISCOURAGED)
-      forbidden shouldNot beEmpty(FORBIDDEN)
+      safe should beEmpty(SAFE)
+      risky should beEmpty(RISKY)
+      fatal shouldNot beEmpty(FATAL)
     }
-    forbidden.shouldHaveNoDiff(FORBIDDEN, message.toSet())
+    fatal.shouldHaveNoDiff(FATAL, message.toSet())
   }
 
-  fun <T : Comparable<T>> Collection<T>.shouldHaveNoDiff(compatibility: Compatibility, expected: Set<T>) {
+  fun <T : Comparable<T>> Collection<T>.shouldHaveNoDiff(risk: Risk, expected: Set<T>) {
     val thisSet = this.toSet()
     val unexpectedValues = expected - thisSet
     val missingValues = thisSet - expected
     val errors = mutableListOf<String>()
 
     if (unexpectedValues.isNotEmpty()) {
-      errors.add("$compatibility should not contain (but did): ${unexpectedValues.print().value}")
+      errors.add("$risk should not contain (but did): ${unexpectedValues.print().value}")
     }
 
     if (missingValues.isNotEmpty()) {
-      errors.add("$compatibility should contain (but did not): ${missingValues.print().value}")
+      errors.add("$risk should contain (but did not): ${missingValues.print().value}")
     }
 
     if (errors.isNotEmpty()) {
@@ -82,11 +82,11 @@ object Util {
     }
   }
 
-  fun <T> beEmpty(compatibility: Compatibility): Matcher<Collection<T>> = object : Matcher<Collection<T>> {
+  fun <T> beEmpty(risk: Risk): Matcher<Collection<T>> = object : Matcher<Collection<T>> {
     override fun test(value: Collection<T>): MatcherResult = MatcherResult(
       value.isEmpty(),
-      { "$compatibility should be empty but contained $value" },
-      { "$compatibility should not be empty" }
+      { "$risk should be empty but contained $value" },
+      { "$risk should not be empty" }
     )
   }
 }
