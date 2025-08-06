@@ -1,4 +1,4 @@
-package io.github.lbenedetto
+package io.github.lbenedetto.inspector
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -7,40 +7,28 @@ import com.fasterxml.jackson.databind.node.TextNode
 import com.flipkart.zjsonpatch.DiffFlags
 import com.flipkart.zjsonpatch.JsonDiff
 import com.flipkart.zjsonpatch.Operation
-import io.github.lbenedetto.jsonschema.AnyOfSimpleType
+import io.github.lbenedetto.jsonschema.CompoundType
 import java.nio.file.Paths
-import java.util.*
+import java.util.EnumSet
+import kotlin.collections.forEach
 
-object Validator {
+object Inspector {
   val objectMapper = ObjectMapper()
 
-  fun validate(
+  fun inspect(
     oldSchemaPath: String,
-    newSchemaPath: String,
-    config: Config = Config()
-  ): ValidationResult {
+    newSchemaPath: String
+  ): DetectedChanges {
     val oldSchema = objectMapper.readTree(Paths.get(oldSchemaPath).toFile())
     val newSchema = objectMapper.readTree(Paths.get(newSchemaPath).toFile())
 
-    return validate(oldSchema, newSchema, config)
+    return inspect(oldSchema, newSchema)
   }
 
-  fun sortAllArrays(node: JsonNode) {
-    node.filter { it is ArrayNode }
-      .map { it as ArrayNode }
-      .forEach {
-        val sorted = it.toList().sortedBy { child -> child.toString() }
-        it.removeAll()
-        it.addAll(sorted)
-      }
-  }
-
-
-  fun validate(
+  fun inspect(
     oldSchema: JsonNode,
-    newSchema: JsonNode,
-    config: Config = Config()
-  ): ValidationResult {
+    newSchema: JsonNode
+  ): DetectedChanges {
     // Presort the arrays so that JsonDiff doesn't get confused by re-ordered lists
     sortAllArrays(oldSchema)
     sortAllArrays(newSchema)
@@ -54,7 +42,7 @@ object Validator {
       )
     )
 
-    val validationResult = ValidationResult()
+    val changes = DetectedChanges()
     // Json diff for re-ordered lists is complex, so we'll just keep track of every modified list
     // And then do our own comparison between the old and new version of the list
     val modifiedAnyOfPaths = mutableSetOf<String>()
@@ -91,105 +79,129 @@ object Validator {
 
     modifiedAnyOfPaths.forEach { path ->
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
+      val fieldPath = path.back().back()
+      val fieldName = getLastSubPath(path.back())
       arrayDiff.added.forEach { addedValue ->
         if (addedValue.isNullType()) {
-          validationResult[config.removingRequired].add("Added null option to anyOf at $path")
+          changes.nonNullRequirement.add(NonNullRequirementChange(fieldPath, fieldName, ChangeType.REMOVED))
         } else {
-          validationResult[config.addingAnyOf].add("Added new anyOf $addedValue to $path")
+          changes.anyOf.add(AnyOfChange(path, addedValue, ChangeType.ADDED))
         }
       }
       arrayDiff.removed.forEach { removedValue ->
         if (removedValue.isNullType()) {
-          validationResult[config.addingRequired].add("Removed null option from anyOf at $path")
+          changes.nonNullRequirement.add(NonNullRequirementChange(fieldPath, fieldName, ChangeType.ADDED))
         } else {
-          validationResult[config.removingAnyOf].add("Removed anyOf $removedValue from $path")
+          changes.anyOf.add(AnyOfChange(path, removedValue, ChangeType.REMOVED))
         }
       }
     }
     modifiedEnumPaths.forEach { path ->
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
       arrayDiff.added.forEach { addedValue ->
-        validationResult[config.addingEnumValue].add("Added new enum value $addedValue to $path")
+        changes.enumValue.add(EnumValueChange(path, addedValue, ChangeType.ADDED))
       }
       arrayDiff.removed.forEach { removedValue ->
-        validationResult[config.removingEnumValue].add("Removed enum value $removedValue from $path")
+        changes.enumValue.add(EnumValueChange(path, removedValue, ChangeType.REMOVED))
       }
     }
     modifiedRequiredPaths.forEach { path ->
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
+      val fieldLocation = "${path.back()}/properties"
       arrayDiff.added.forEach { addedValue ->
-        validationResult[config.addingRequired].add("Added non-null requirement for $addedValue to $path")
+        changes.nonNullRequirement.add(
+          NonNullRequirementChange(
+            fieldLocation,
+            addedValue.textValue(),
+            ChangeType.ADDED
+          )
+        )
       }
       arrayDiff.removed.forEach { removedValue ->
-        validationResult[config.removingRequired].add("Removed non-null requirement for $removedValue from $path")
+        changes.nonNullRequirement.add(
+          NonNullRequirementChange(
+            fieldLocation,
+            removedValue.textValue(),
+            ChangeType.REMOVED
+          )
+        )
       }
     }
 
     addedFieldPaths.forEach { path ->
       if (newSchema.isMinItemsPath(path)) {
         val value = newSchema.at(path).asInt()
-        validationResult[Compatibility.FORBIDDEN].add("Added minItems requirement of $value at $path")
+        changes.minItems.add(MinItemsChange(path, null, value, ChangeType.ADDED))
         return@forEach
       }
       val fieldName = getLastSubPath(path)
-      if (newSchema.isFieldRequired(path, fieldName)) {
-        validationResult[config.addingRequiredFields].add("Added new required field $fieldName at $path")
-      } else {
-        validationResult[config.addingOptionalFields].add("Added new optional field $fieldName at $path")
-      }
+      val isFieldRequired = newSchema.isFieldRequired(path, fieldName)
+      changes.fields.add(FieldChange(path.back(), fieldName, ChangeType.ADDED, isFieldRequired))
     }
 
     removedFieldPaths.forEach { path ->
       if (newSchema.isMinItemsPath(path)) {
-        val value = newSchema.at(path).asInt()
-        validationResult[Compatibility.ALLOWED].add("Removed minItems requirement of $value at $path")
+        val value = oldSchema.at(path).asInt()
+        changes.minItems.add(MinItemsChange(path, value, null, ChangeType.REMOVED))
         return@forEach
       }
       val fieldName = getLastSubPath(path)
-      if (oldSchema.isFieldRequired(path, fieldName)) {
-        validationResult[config.removingRequiredFields].add("Removed a field $fieldName at $path which was previously required")
-      } else {
-        validationResult[config.removingOptionalFields].add("Removed a field $fieldName at $path which was previously optional")
-      }
+      val wasFieldRequired = oldSchema.isFieldRequired(path, fieldName)
+      changes.fields.add(FieldChange(path.back(), fieldName, ChangeType.REMOVED, wasFieldRequired))
     }
 
     changedFieldPaths.forEach { path ->
       if (newSchema.isMinItemsPath(path)) {
         val oldValue = oldSchema.at(path).asInt()
         val newValue = newSchema.at(path).asInt()
-        if (newValue > oldValue) {
-          validationResult[Compatibility.FORBIDDEN].add("Increased minItems from $oldValue to $newValue at $path")
+        val changeType = if (newValue > oldValue) {
+          ChangeType.INCREASED
         } else {
-          validationResult[Compatibility.ALLOWED].add("Decreased minItems from $oldValue to $newValue at $path")
+          ChangeType.DECREASED
         }
+        changes.minItems.add(MinItemsChange(path, oldValue, newValue, changeType))
       } else if (path.matches(plainFieldTypeRegex)) {
         val oldType = oldSchema.resolveSimpleType(path)
         val newType = newSchema.resolveSimpleType(path)
-        val changeCompatibility = if (newType.isNullable() && !oldType.isNullable()) {
-          config.removingRequired
-        } else if (!newType.isNullable() && oldType.isNullable()) {
-          config.addingRequired
-        } else if (newType.ignoringNull() != oldType.ignoringNull()) {
-          Compatibility.FORBIDDEN
-        } else {
-          Compatibility.ALLOWED
+        val oldTypeIsNullable = oldType.isNullable()
+        val newTypeIsNullable = newType.isNullable()
+        val fieldName = getLastSubPath(path.back())
+        val fieldLocation = path.back().back()
+        if (newTypeIsNullable && !oldTypeIsNullable) {
+          changes.nonNullRequirement.add(NonNullRequirementChange(fieldLocation, fieldName, ChangeType.REMOVED))
+        } else if (!newTypeIsNullable && oldTypeIsNullable) {
+          changes.nonNullRequirement.add(NonNullRequirementChange(fieldLocation, fieldName, ChangeType.ADDED))
         }
 
-        validationResult[changeCompatibility].add("Changed field type from $oldType to $newType at $path")
+        val newTypeIgnoringNull = newType.ignoringNull()
+        val oldTypeIgnoringNull = oldType.ignoringNull()
+        if (newTypeIgnoringNull != oldTypeIgnoringNull) {
+          changes.fieldTypes.add(FieldTypeChange(path, oldTypeIgnoringNull, newTypeIgnoringNull))
+        }
       } else {
         val oldValue = oldSchema.at(path).toString()
         val newValue = newSchema.at(path).toString()
-        validationResult[Compatibility.FORBIDDEN].add("Changed field at $path from: $oldValue to: $newValue")
+        throw IllegalStateException("Unexpected field change: $path. Old value: $oldValue. New value: $newValue")
       }
     }
 
-    return validationResult
+    return changes
   }
 
-  private fun JsonNode.resolveSimpleType(path: String): AnyOfSimpleType {
+  private fun sortAllArrays(node: JsonNode) {
+    node.filter { it is ArrayNode }
+      .map { it as ArrayNode }
+      .forEach {
+        val sorted = it.toList().sortedBy { child -> child.toString() }
+        it.removeAll()
+        it.addAll(sorted)
+      }
+  }
+
+  private fun JsonNode.resolveSimpleType(path: String): CompoundType {
     return when (val typeNode = at(path)) {
-      is ArrayNode -> AnyOfSimpleType(typeNode.map { it.textValue() })
-      is TextNode -> AnyOfSimpleType(listOf(typeNode.textValue()))
+      is ArrayNode -> CompoundType(typeNode.map { it.textValue() })
+      is TextNode -> CompoundType(listOf(typeNode.textValue()))
       else -> throw IllegalStateException("Unexpected type node: $typeNode")
     }
   }
@@ -205,7 +217,7 @@ object Validator {
     return substringBeforeLast("/")
   }
 
-  private fun JsonNode.isFieldRequired(path: String, fieldName: String) : Boolean {
+  private fun JsonNode.isFieldRequired(path: String, fieldName: String): Boolean {
     return at(path.back().back()).withArray<ArrayNode>("required")
       .any { it.asText() == fieldName }
   }
@@ -230,9 +242,9 @@ object Validator {
   private fun computeArrayDiff(oldSchema: JsonNode, newSchema: JsonNode, path: String): ArrayDiff {
     val oldList = oldSchema.withArray<ArrayNode>(path).toSet()
     val newList = newSchema.withArray<ArrayNode>(path).toSet()
-     return ArrayDiff(
-       added = newList - oldList,
-       removed = oldList - newList
-     )
+    return ArrayDiff(
+      added = newList - oldList,
+      removed = oldList - newList
+    )
   }
 }

@@ -1,14 +1,14 @@
 package io.github.lbenedetto
 
-import io.github.lbenedetto.Compatibility.ALLOWED
-import io.github.lbenedetto.Compatibility.FORBIDDEN
+import io.github.lbenedetto.inspector.ChangeType
+import io.github.lbenedetto.inspector.FieldChange
+import io.github.lbenedetto.inspector.Inspector
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.Util
-import io.github.lbenedetto.util.Util.shouldAllow
-import io.github.lbenedetto.util.Util.shouldForbid
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.shouldBe
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 
 internal class RemovingOptionalFieldsTest : BehaviorSpec({
 
@@ -18,16 +18,18 @@ internal class RemovingOptionalFieldsTest : BehaviorSpec({
     When("An optional field is removed") {
       val newSchema = oldSchema.withPatches(remove("/properties/someNullableField"))
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(removingOptionalFields = ALLOWED))
-          .shouldAllow("Removed a field someNullableField at /properties/someNullableField which was previously optional")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          FieldChange("/properties", "someNullableField", ChangeType.REMOVED, false)
+        )
       }
     }
 
     When("A required field is removed") {
       val newSchema = oldSchema.withPatches(remove("/properties/fieldWhichReferencesRequiredTypeDef"))
       Then("Change should be detected") {
-        Validator.validate(oldSchema, newSchema, Config(removingOptionalFields = FORBIDDEN))
-          .shouldForbid("Removed a field fieldWhichReferencesRequiredTypeDef at /properties/fieldWhichReferencesRequiredTypeDef which was previously required")
+        Inspector.inspect(oldSchema, newSchema).all().shouldContain(
+          FieldChange("/properties", "fieldWhichReferencesRequiredTypeDef", ChangeType.REMOVED, true)
+        )
       }
     }
   }
