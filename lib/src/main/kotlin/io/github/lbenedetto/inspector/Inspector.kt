@@ -3,11 +3,10 @@ package io.github.lbenedetto.inspector
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.TextNode
 import com.flipkart.zjsonpatch.DiffFlags
 import com.flipkart.zjsonpatch.JsonDiff
 import com.flipkart.zjsonpatch.Operation
-import io.github.lbenedetto.jsonschema.CompoundType
+import io.github.lbenedetto.jsonschema.resolveType
 import java.nio.file.Paths
 import java.util.EnumSet
 import kotlin.collections.forEach
@@ -55,7 +54,8 @@ object Inspector {
     val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
     val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
     val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
-    val plainFieldTypeRegex = Regex(".*/properties/.*?/type$")
+    val anyOfRegex = Regex(".*/properties/[^/]*/anyOf$")
+    val refRegex = Regex(".*/properties/[^/]*/[$]ref$")
 
     diff.forEach { node ->
       val operation = Operation.fromRfcName(node["op"].asText())
@@ -69,8 +69,22 @@ object Inspector {
         modifiedRequiredPaths.add(path.back())
       } else {
         when (operation) {
-          Operation.REMOVE -> removedFieldPaths.add(path)
-          Operation.ADD -> addedFieldPaths.add(path)
+          Operation.REMOVE -> {
+            // Indicates we are changing to a different way of specifying the type of the property
+            if (path.matches(anyOfRegex) || path.matches(refRegex)) {
+              changedFieldPaths.add(path)
+            } else {
+              removedFieldPaths.add(path)
+            }
+          }
+          Operation.ADD -> {
+            // Indicates we are changing to a different way of specifying the type of the property
+            if (path.matches(anyOfRegex) || path.matches(refRegex)) {
+              changedFieldPaths.add(path)
+            } else {
+              addedFieldPaths.add(path)
+            }
+          }
           Operation.REPLACE -> changedFieldPaths.add(path)
           Operation.MOVE, Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
         }
@@ -152,33 +166,26 @@ object Inspector {
         val newValue = newSchema.at(path).asInt()
         val changeType = if (newValue > oldValue) ChangeType.ADDED else ChangeType.REMOVED
         changes.minItems += MinItemsChange(path, oldValue, newValue, changeType)
-      } else if (path.matches(plainFieldTypeRegex)) {
-        val oldType = oldSchema.at(path).resolveType()
-        val newType = newSchema.at(path).resolveType()
-        val fieldName = getLastSubPath(path.back())
-        val fieldLocation = path.back().back()
+        return@forEach
+      }
+      val fieldPath = path.back()
+      val oldType = oldSchema.at(fieldPath).resolveType(oldSchema)
+      val newType = newSchema.at(fieldPath).resolveType(newSchema)
+      val fieldName = getLastSubPath(fieldPath)
+      val fieldLocation = fieldPath.back()
 
-        val oldTypeIsNullable = oldType.isNullable()
-        val newTypeIsNullable = newType.isNullable()
-        if (newTypeIsNullable && !oldTypeIsNullable) {
-          changes.nonNullRequirement += NonNullRequirementChange(fieldLocation, fieldName, ChangeType.REMOVED)
-        } else if (!newTypeIsNullable && oldTypeIsNullable) {
-          changes.nonNullRequirement += NonNullRequirementChange(fieldLocation, fieldName, ChangeType.ADDED)
-        }
+      val oldTypeIsNullable = oldType.isNullable()
+      val newTypeIsNullable = newType.isNullable()
+      if (newTypeIsNullable && !oldTypeIsNullable) {
+        changes.nonNullRequirement += NonNullRequirementChange(fieldLocation, fieldName, ChangeType.REMOVED)
+      } else if (!newTypeIsNullable && oldTypeIsNullable) {
+        changes.nonNullRequirement += NonNullRequirementChange(fieldLocation, fieldName, ChangeType.ADDED)
+      }
 
-        val newTypeIgnoringNull = newType.ignoringNull()
-        val oldTypeIgnoringNull = oldType.ignoringNull()
-        if (newTypeIgnoringNull != oldTypeIgnoringNull) {
-          changes.fieldTypes += FieldTypeChange(path, oldTypeIgnoringNull.toString(), newTypeIgnoringNull.toString())
-        }
-      } else if (path.endsWith("\$ref")) {
-        val oldValue = oldSchema.at(oldSchema.at(path).textValue().substringAfter("#"))
-        val newValue = newSchema.at(newSchema.at(path).textValue().substringAfter("#"))
-        changes.fieldTypes += FieldTypeChange(path, oldValue.toString(), newValue.toString())
-      } else {
-        val oldValue = oldSchema.at(path).toString()
-        val newValue = newSchema.at(path).toString()
-        throw IllegalStateException("Unexpected field change: $path. Old value: $oldValue. New value: $newValue")
+      val newTypeIgnoringNull = newType.ignoringNull()
+      val oldTypeIgnoringNull = oldType.ignoringNull()
+      if (newTypeIgnoringNull != oldTypeIgnoringNull) {
+        changes.fieldTypes += FieldTypeChange(path, oldTypeIgnoringNull.toString(), newTypeIgnoringNull.toString())
       }
     }
 
@@ -193,14 +200,6 @@ object Inspector {
         it.removeAll()
         it.addAll(sorted)
       }
-  }
-
-  private fun JsonNode.resolveType(): CompoundType {
-    return when (this) {
-      is ArrayNode -> CompoundType(this.map { it.textValue() })
-      is TextNode -> CompoundType(listOf(this.textValue()))
-      else -> throw IllegalStateException("Unexpected type node: $this")
-    }
   }
 
   /**
@@ -221,19 +220,7 @@ object Inspector {
 
   private fun JsonNode.isFieldNullable(path: String): Boolean {
     val nodeAtPath = at(path)
-    if (nodeAtPath.has("type")) {
-      return nodeAtPath["type"].resolveType().isNullable()
-    }
-    if (nodeAtPath.has("anyOf")) {
-      return nodeAtPath.withArray<JsonNode>("anyOf")
-        .mapIndexed { index, _ -> this.isFieldNullable("$path/anyOf/$index")}
-        .any()
-    }
-    if (nodeAtPath.has("\$ref")) {
-      return isFieldNullable(nodeAtPath["\$ref"].asText().substringAfter("#"))
-    }
-
-    throw IllegalStateException("Unable to determine field nullability at $path")
+    return nodeAtPath.resolveType(this).isNullable()
   }
 
   private fun JsonNode.isMinItemsPath(path: String): Boolean {

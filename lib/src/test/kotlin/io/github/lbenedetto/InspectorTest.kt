@@ -32,7 +32,7 @@ internal class InspectorTest : BehaviorSpec({
 
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          FieldTypeChange("/properties/someIntegerField/type", "INTEGER", "STRING")
+          FieldTypeChange("/properties/someIntegerField/type", "[INTEGER]", "[STRING]")
         )
       }
     }

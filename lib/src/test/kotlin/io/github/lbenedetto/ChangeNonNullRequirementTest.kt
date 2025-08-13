@@ -4,6 +4,7 @@ import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.Inspector
 import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
+import io.github.lbenedetto.util.PatchDSL.jsonObject
 import io.github.lbenedetto.util.PatchDSL.jsonString
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.PatchDSL.replace
@@ -65,6 +66,23 @@ internal class ChangeNonNullRequirementTest : BehaviorSpec({
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
           NonNullRequirementChange("/properties", "fieldWithAnyOf", ChangeType.REMOVED),
+        )
+      }
+    }
+
+    When("A field is made nullable by changing anyOf") {
+      val oldSchema = Util.readSchema(schemaPath)
+      val newSchema = oldSchema.withPatches(
+        remove($$"/properties/fieldWhichReferencesNonNullTypeDef/$ref"),
+        add("/properties/fieldWhichReferencesNonNullTypeDef/anyOf", "[]"),
+        add("/properties/fieldWhichReferencesNonNullTypeDef/anyOf/-", """{"type": "null"}"""),
+        add("/properties/fieldWhichReferencesNonNullTypeDef/anyOf/-", jsonObject($$"$ref" to jsonString($$"#/$defs/SomePojo"))),
+      )
+      println(newSchema.toPrettyString())
+
+      Then("Change should be detected") {
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          NonNullRequirementChange("/properties", "fieldWhichReferencesNonNullTypeDef", ChangeType.REMOVED),
         )
       }
     }

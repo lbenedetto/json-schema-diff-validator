@@ -2,18 +2,14 @@ package io.github.lbenedetto
 
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.Inspector
-import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.inspector.NotAbsentRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
 import io.github.lbenedetto.util.PatchDSL.jsonString
 import io.github.lbenedetto.util.PatchDSL.remove
-import io.github.lbenedetto.util.PatchDSL.replace
 import io.github.lbenedetto.util.Util
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.property.checkAll
-import io.kotest.property.exhaustive.exhaustive
 
 internal class ChangeNotAbsentRequirementTest : BehaviorSpec({
   Given("A schema") {

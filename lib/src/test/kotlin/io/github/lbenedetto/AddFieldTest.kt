@@ -15,7 +15,7 @@ internal class AddFieldTest : BehaviorSpec({
   Given("A schema") {
     val schemaPath = "ExampleObject.schema"
 
-    When("A non-null field is added") {
+    When("A non-null primitive field is added") {
       val oldSchema = Util.readSchema(schemaPath)
       val newSchema = oldSchema.withPatches(
         add("/properties/newField", """{ "type": "string" }"""),
@@ -29,7 +29,7 @@ internal class AddFieldTest : BehaviorSpec({
       }
     }
 
-    When("A nullable field is added") {
+    When("A nullable primitive field is added") {
       val oldSchema = Util.readSchema(schemaPath)
       val newSchema = oldSchema.withPatches(
         add("/properties/newField", """{ "type": ["string", "null"] }"""),
@@ -38,6 +38,19 @@ internal class AddFieldTest : BehaviorSpec({
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
           FieldChange("/properties", "newField", ChangeType.ADDED)
+        )
+      }
+    }
+
+    When("A nullable object field is added with non-null fields") {
+      val oldSchema = Util.readSchema(schemaPath)
+      val newSchema = oldSchema.withPatches(
+        add("/properties/newField", """{ "type": ["object", "null"], "properties": { "someField": { "type": "string" } } }"""),
+      )
+
+      Then("Change should be detected") {
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          FieldChange("/properties", "newField", ChangeType.ADDED),
         )
       }
     }
