@@ -67,9 +67,9 @@ object Inspector {
         modifiedEnumPaths.add(path.back())
       } else if (path.matches(modifiedRequiredRegex)) {
         modifiedRequiredPaths.add(path.back())
-      } else if (getLastSubPath(path) == "required" && getLastSubPath(path.back()) != "properties") {
+      } else if (getLastSubPath(path) == "required" && path.parentSubPath() != "properties") {
         modifiedRequiredPaths.add(path)
-      } else if (path.startsWith("/$") && getLastSubPath(path.back()) == "") {
+      } else if (path.startsWith("/$") && path.parentSubPath() == "") {
         return@forEach // Ignore change
       } else {
         when (operation) {
@@ -77,7 +77,7 @@ object Inspector {
             // Indicates we are changing to a different way of specifying the type of the property
             if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
-            } else if (getLastSubPath(path.back()) != $$"$defs") {
+            } else if (path.parentSubPath() != $$"$defs") {
               removedFieldPaths.add(path)
             }
           }
@@ -85,7 +85,7 @@ object Inspector {
             // Indicates we are changing to a different way of specifying the type of the property
             if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
-            } else if (getLastSubPath(path.back()) != $$"$defs") {
+            } else if (path.parentSubPath() != $$"$defs") {
               addedFieldPaths.add(path)
             }
           }
@@ -98,7 +98,7 @@ object Inspector {
     modifiedAnyOfPaths.forEach { path ->
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
       val fieldPath = path.back().back()
-      val fieldName = getLastSubPath(path.back())
+      val fieldName = path.parentSubPath()
       arrayDiff.added.forEach { addedValue ->
         if (addedValue.isNullType()) {
           changes.nonNullRequirement += NonNullRequirementChange(fieldPath, fieldName, ChangeType.REMOVED)
@@ -215,6 +215,10 @@ object Inspector {
 
   private fun String.back(): String {
     return substringBeforeLast("/")
+  }
+
+  private fun String.parentSubPath() : String {
+    return getLastSubPath(back())
   }
 
   private fun JsonNode.isFieldRequired(path: String, fieldName: String): Boolean {
