@@ -29,6 +29,22 @@ internal class ChangeNotAbsentRequirementTest : BehaviorSpec({
       }
     }
 
+    When("A field is made optional by removing all required fields") {
+      val oldSchema = Util.readSchema(schemaPath)
+      val newSchema = oldSchema.withPatches(
+        remove("/required")
+      )
+
+      Then("Change should be detected") {
+        Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
+          NotAbsentRequirementChange("/properties", "someIntegerField", ChangeType.REMOVED),
+          NotAbsentRequirementChange("/properties", "listOfEnumValues", ChangeType.REMOVED),
+          NotAbsentRequirementChange("/properties", "listOfObjects", ChangeType.REMOVED),
+          NotAbsentRequirementChange("/properties", "someEnumValue", ChangeType.REMOVED),
+        )
+      }
+    }
+
     When("A field is made required") {
       val field = "someNullableField"
       val oldSchema = Util.readSchema(schemaPath)

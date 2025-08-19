@@ -67,6 +67,8 @@ object Inspector {
         modifiedEnumPaths.add(path.back())
       } else if (path.matches(modifiedRequiredRegex)) {
         modifiedRequiredPaths.add(path.back())
+      } else if (getLastSubPath(path) == "required" && getLastSubPath(path.back()) != "properties") {
+        modifiedRequiredPaths.add(path)
       } else {
         when (operation) {
           Operation.REMOVE -> {
