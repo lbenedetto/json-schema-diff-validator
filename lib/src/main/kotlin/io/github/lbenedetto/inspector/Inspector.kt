@@ -69,7 +69,7 @@ object Inspector {
         modifiedRequiredPaths.add(path.back())
       } else if (getLastSubPath(path) == "required" && getLastSubPath(path.back()) != "properties") {
         modifiedRequiredPaths.add(path)
-      } else if (path.startsWith("/$")) {
+      } else if (path.startsWith("/$") && getLastSubPath(path.back()) == "") {
         return@forEach // Ignore change
       } else {
         when (operation) {
@@ -77,7 +77,7 @@ object Inspector {
             // Indicates we are changing to a different way of specifying the type of the property
             if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
-            } else {
+            } else if (getLastSubPath(path.back()) != $$"$defs") {
               removedFieldPaths.add(path)
             }
           }
@@ -85,7 +85,7 @@ object Inspector {
             // Indicates we are changing to a different way of specifying the type of the property
             if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
-            } else {
+            } else if (getLastSubPath(path.back()) != $$"$defs") {
               addedFieldPaths.add(path)
             }
           }
