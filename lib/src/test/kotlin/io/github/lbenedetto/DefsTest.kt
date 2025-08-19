@@ -3,9 +3,7 @@ package io.github.lbenedetto
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.FieldChange
 import io.github.lbenedetto.inspector.Inspector
-import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
-import io.github.lbenedetto.util.PatchDSL.jsonString
 import io.github.lbenedetto.util.PatchDSL.remove
 import io.github.lbenedetto.util.Util
 import io.github.lbenedetto.util.Util.withPatches
@@ -61,7 +59,7 @@ internal class DefsTest : BehaviorSpec({
                     "someProp"
                   ]
                 }""".trimIndent()
-            @Suppress("JsonStandardCompliance")
+            @Suppress("JsonStandardCompliance") // Reported false positive as KTIJ-35303
             val newField = $$"""
                 {
                   "anyOf": [
