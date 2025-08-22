@@ -4,6 +4,7 @@
 [versions]
 zjsonpatch = "0.5.0"
 kotest = "5.9.1"
+dokka = "2.0.0"
 
 [libraries]
 zjsonpatch = { module = "io.github.vishwakarma:zjsonpatch", version.ref = "zjsonpatch" }
@@ -12,5 +13,6 @@ kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
 
 [plugins]
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.0" }
-dokka = { id = "org.jetbrains.dokka", version = "1.9.20" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.10" }
+dokka-core = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+dokka-javadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }

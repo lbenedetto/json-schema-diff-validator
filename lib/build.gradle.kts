@@ -1,9 +1,10 @@
-import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.gradle.tasks.DokkaGeneratePublicationTask
 import java.net.URI
 
 plugins {
   alias(libs.plugins.kotlin.jvm)
-  alias(libs.plugins.dokka)
+  alias(libs.plugins.dokka.core)
+  alias(libs.plugins.dokka.javadoc)
   `java-library`
   `maven-publish`
   signing
@@ -43,12 +44,12 @@ java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(21)
   }
+}
 
-  tasks.named<Jar>("javadocJar") {
-    val dokkaJavadoc = tasks.named<DokkaTask>("dokkaJavadoc")
-    dependsOn(dokkaJavadoc)
-    from(dokkaJavadoc.flatMap { it.outputDirectory })
-  }
+tasks.named<Jar>("javadocJar") {
+  val dokkaJavadoc = tasks.named<DokkaGeneratePublicationTask>("dokkaGeneratePublicationJavadoc")
+  dependsOn(dokkaJavadoc)
+  from(dokkaJavadoc.flatMap { it.outputDirectory })
 }
 
 object ProjectInfo {
@@ -115,7 +116,7 @@ signing {
   val signingPassword = System.getenv("SIGNING_PASSWORD")
 
   if (signingKey == null || signingPassword == null) {
-    println("No SIGNING_KEY or SIGNING_PASSWORD found, skipping signing!")
+    logger.warn("No SIGNING_KEY or SIGNING_PASSWORD found, skipping signing!")
     return@signing
   }
 
