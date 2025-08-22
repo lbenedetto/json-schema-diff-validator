@@ -13,3 +13,4 @@ kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.0" }
+dokka = { id = "org.jetbrains.dokka", version = "1.9.20" }

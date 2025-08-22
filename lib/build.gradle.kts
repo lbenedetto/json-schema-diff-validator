@@ -1,7 +1,9 @@
+import org.jetbrains.dokka.gradle.DokkaTask
 import java.net.URI
 
 plugins {
   alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.dokka)
   `java-library`
   `maven-publish`
   signing
@@ -32,12 +34,20 @@ tasks.withType<Test>().configureEach {
   useJUnitPlatform()
 }
 
+
+
 java {
   withJavadocJar()
   withSourcesJar()
 
   toolchain {
     languageVersion = JavaLanguageVersion.of(21)
+  }
+
+  tasks.named<Jar>("javadocJar") {
+    val dokkaJavadoc = tasks.named<DokkaTask>("dokkaJavadoc")
+    dependsOn(dokkaJavadoc)
+    from(dokkaJavadoc.flatMap { it.outputDirectory })
   }
 }
 
@@ -99,8 +109,11 @@ signing {
   val signingKey = System.getenv("SIGNING_KEY")
   val signingPassword = System.getenv("SIGNING_PASSWORD")
 
-  if (signingKey != null && signingPassword != null) {
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(publishing.publications["mavenJava"])
+  if (signingKey == null || signingPassword == null) {
+    println("No SIGNING_KEY or SIGNING_PASSWORD found, skipping signing!")
+    return@signing
   }
+
+  useInMemoryPgpKeys(signingKey, signingPassword)
+  sign(publishing.publications["mavenJava"])
 }
