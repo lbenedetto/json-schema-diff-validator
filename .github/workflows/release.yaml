@@ -46,7 +46,7 @@ jobs:
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew publish
+        run: ./gradlew publish --no-configuration-cache
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
