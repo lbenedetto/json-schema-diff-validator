@@ -1,10 +1,10 @@
-### JSON Schema Diff Validator
+# JSON Schema Diff Validator
 
 This project is a JSON Schema Diff Validator library for the JVM. It helps validate that changes to JSON schemas maintain backward compatibility, which is crucial for ensuring that API changes don't break existing clients.
 
 It was originally "forked" from https://www.npmjs.com/package/json-schema-diff-validator, but the logic has since been complete rewritten with a different approach which should be more robust and configurable at the same time.
 
-### Core Features
+## Core Features
 
 - Validates that a new JSON schema is backward compatible with an old schema
 - Configurable validation rules for different types of changes
@@ -14,11 +14,27 @@ It is recommended to use this in combination with something like [com.github.vic
 
 This library was created to help ensure that changes to a Java object will not break deserialization of cached JSON data, and as such the validation defaults are optimized for that use case.
 
-### How It Works
+## How It Works
 
 The validator compares two JSON schemas (old and new) and identifies changes that might break backward compatibility. It uses the [zjsonpatch](https://github.com/flipkart-incubator/zjsonpatch) library to compute the differences between schemas.
 
-### Configuration Options
+## Installation
+
+### Gradle
+```kotlin
+implementation("io.github.lbenedetto:json-schema-diff-validator:1.0.0")
+```
+
+### Maven
+```xml
+<dependency>
+  <groupId>io.github.lbenedetto</groupId>
+  <artifactId>json-schema-diff-validator</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+## Configuration Options
 
 The validator can be configured with different compatibility levels for various types of changes:
 
@@ -40,7 +56,7 @@ Each option can be set to one of three compatibility levels:
 - `DISCOURAGED`: Detected changes will be added to the result as warning
 - `FORBIDDEN`: Detected changes will be added to the result as error
 
-### Usage Example
+## Usage Example
 
 Basic usage with default configuration:
 ```kotlin
@@ -61,7 +77,7 @@ var result = Validator.validate(oldSchemaPath, newSchemaPath, Config.defaultConf
     .addingRequired(Compatibility.DISCOURAGED));
 ```
 
-### Dependencies
+## Dependencies
 
 - Jackson for JSON processing
 - zjsonpatch for computing JSON differences
