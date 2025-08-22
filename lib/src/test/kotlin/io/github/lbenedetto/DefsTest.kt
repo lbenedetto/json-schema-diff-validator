@@ -23,7 +23,6 @@ internal class DefsTest : BehaviorSpec({
             )
 
             Then("Only property changes should be detected") {
-                val result = Inspector.inspect(oldSchema, newSchema).all()
                 Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
                     FieldChange("/properties", "foo", ChangeType.REMOVED),
                     FieldChange("/properties", "something", ChangeType.REMOVED)
