@@ -51,17 +51,22 @@ java {
   }
 }
 
-group = "io.github.lbenedetto"
-version = "1.0.0"
+object ProjectInfo {
+  const val GROUP = "io.github.lbenedetto"
+  const val VERSION = "1.0.0"
+}
+
+group = ProjectInfo.GROUP
+version = ProjectInfo.VERSION
 
 publishing {
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["java"])
 
-      groupId = project.group.toString()
+      groupId = ProjectInfo.GROUP
       artifactId = "json-schema-diff-validator"
-      version = project.version.toString()
+      version = ProjectInfo.VERSION
 
       pom {
         name.set("json-schema-diff-validator")
