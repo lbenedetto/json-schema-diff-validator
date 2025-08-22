@@ -37,7 +37,7 @@ jobs:
 
       - name: Decode GPG key
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > signing-key.gpg
+          echo "${{ secrets.SIGNING_KEY }}" > signing-key.gpg
           gpg --quiet --batch --yes --import signing-key.gpg
           rm signing-key.gpg
 
