@@ -3,6 +3,7 @@ package io.github.lbenedetto.validator
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.lbenedetto.inspector.Change
 import io.github.lbenedetto.inspector.ChangeType
+import io.github.lbenedetto.inspector.ChangeWithField
 import io.github.lbenedetto.inspector.ChangeWithType
 import io.github.lbenedetto.inspector.DetectedChanges
 import io.github.lbenedetto.inspector.FieldChange
@@ -47,7 +48,8 @@ object Validator {
 
   fun ValidationResult.addFieldChanges(fieldChanges: Set<FieldChange>, changesPerPath: Map<String, List<Change>>, config: Config) {
     fieldChanges.forEach { change ->
-      val changesAtPath = changesPerPath[change.path] ?: emptyList()
+        val changesAtPath = (changesPerPath[change.path] ?: emptyList())
+            .filter { it is ChangeWithField && it.field == change.field }
       val hasNonNullRequirement = changesAtPath.any { it is NonNullRequirementChange }
       val hasNotAbsentRequirement = changesAtPath.any { it is NotAbsentRequirementChange }
 

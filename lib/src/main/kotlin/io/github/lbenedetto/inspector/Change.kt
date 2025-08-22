@@ -10,6 +10,10 @@ interface ChangeWithType : Change {
   val changeType: ChangeType
 }
 
+interface ChangeWithField : ChangeWithType {
+  val field: String
+}
+
 private fun Change.withContext(toString: String) = "${this::class.simpleName}: $toString at $path"
 
 data class AnyOfChange(override val path: String, val value: JsonNode, override val changeType: ChangeType) : ChangeWithType {
@@ -20,7 +24,7 @@ data class EnumValueChange(override val path: String, val value: JsonNode, overr
   override fun toString() = withContext("$changeType enum value $value")
 }
 
-data class FieldChange(override val path: String, val field: String, override val changeType: ChangeType) : ChangeWithType {
+data class FieldChange(override val path: String, override val field: String, override val changeType: ChangeType) : ChangeWithField {
   override fun toString() = withContext("$changeType field $field")
 }
 
@@ -28,11 +32,11 @@ data class FieldTypeChange(override val path: String, val oldType: String, val n
   override fun toString() = withContext("Field type changed from $oldType to $newType")
 }
 
-data class NonNullRequirementChange(override val path: String, val field: String, override val changeType: ChangeType) : ChangeWithType {
+data class NonNullRequirementChange(override val path: String, override val field: String, override val changeType: ChangeType) : ChangeWithField {
   override fun toString() = withContext("$changeType non-null requirement for $field")
 }
 
-data class NotAbsentRequirementChange(override val path: String, val field: String, override val changeType: ChangeType) : ChangeWithType {
+data class NotAbsentRequirementChange(override val path: String, override val field: String, override val changeType: ChangeType) : ChangeWithField {
   override fun toString() = withContext("$changeType non-null requirement for $field")
 }
 
