@@ -25,10 +25,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Extract version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Build with Gradle
         run: ./gradlew assemble
 
@@ -41,13 +37,24 @@ jobs:
           gpg --quiet --batch --yes --import signing-key.gpg
           rm signing-key.gpg
 
-      - name: Publish to Maven Central
+      - name: Publish to OSSRH Staging
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew publish --no-configuration-cache
+
+      - name: Trigger upload to Central Portal
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        # language=bash
+        run: |
+          token = $(echo "$OSSRH_USERNAME:$OSSRH_PASSWORD" | base64 -w 0)
+          curl 'https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.lbenedetto?publishing_type=automatic&deployment_name=json-schema-diff-validator' \
+           -X 'POST' \
+           -H "authorization: Bearer $token"
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
