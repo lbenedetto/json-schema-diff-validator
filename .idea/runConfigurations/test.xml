@@ -1,17 +1,24 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="test" type="ioKotest" factoryName="Kotest" defaultName="singleModule">
-    <module name="json-schema-diff-validator.lib.test" />
-    <option name="jrePath" value="corretto current" />
-    <option name="jrePathEnabled" value="true" />
-    <option name="passParentEnvs" value="true" />
-    <option name="workingDirectory" value="$MODULE_WORKING_DIR$" />
-    <option name="programParameters" value="" />
-    <option name="specName" value="" />
-    <option name="testPath" value="" />
-    <option name="packageName" value="" />
-    <option name="vmparams" value="" />
-    <method v="2">
-      <option name="Make" enabled="true" />
-    </method>
+  <configuration default="false" name="test" type="GradleRunConfiguration" factoryName="Gradle">
+    <ExternalSystemSettings>
+      <option name="executionName" />
+      <option name="externalProjectPath" value="$PROJECT_DIR$" />
+      <option name="externalSystemIdString" value="GRADLE" />
+      <option name="scriptParameters" value="" />
+      <option name="taskDescriptions">
+        <list />
+      </option>
+      <option name="taskNames">
+        <list>
+          <option value=":lib:test" />
+        </list>
+      </option>
+      <option name="vmOptions" />
+    </ExternalSystemSettings>
+    <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+    <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+    <DebugAllEnabled>false</DebugAllEnabled>
+    <RunAsTest>true</RunAsTest>
+    <method v="2" />
   </configuration>
 </component>
