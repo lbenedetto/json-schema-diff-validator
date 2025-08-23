@@ -51,7 +51,7 @@ jobs:
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
         # language=bash
         run: |
-          token = $(echo "$OSSRH_USERNAME:$OSSRH_PASSWORD" | base64 -w 0)
+          token=$(echo "$OSSRH_USERNAME:$OSSRH_PASSWORD" | base64 -w 0)
           curl 'https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.lbenedetto?publishing_type=automatic&deployment_name=json-schema-diff-validator' \
            -X 'POST' \
            -H "authorization: Bearer $token"
