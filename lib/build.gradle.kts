@@ -123,3 +123,10 @@ signing {
   useInMemoryPgpKeys(signingKey, signingPassword)
   sign(publishing.publications["mavenJava"])
 }
+
+// Ensure produced JARs (main, sources, javadoc) are named "json-schema-diff-validator-<version>.jar"
+// instead of defaulting to the subproject name "lib".
+// This affects jar, sourcesJar, and javadocJar tasks (all of type Jar).
+tasks.withType<Jar>().configureEach {
+  archiveBaseName.set("json-schema-diff-validator")
+}
