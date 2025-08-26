@@ -37,7 +37,7 @@ data class NonNullRequirementChange(override val path: String, override val fiel
 }
 
 data class NotAbsentRequirementChange(override val path: String, override val field: String, override val changeType: ChangeType) : ChangeWithField {
-  override fun toString() = withContext("$changeType non-null requirement for $field")
+  override fun toString() = withContext("$changeType not-absent requirement for $field")
 }
 
 data class MinItemsChange(override val path: String, val oldValue: Int?, val newValue: Int?, override val changeType: ChangeType) : ChangeWithType {
