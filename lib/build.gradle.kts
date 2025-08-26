@@ -54,7 +54,7 @@ tasks.named<Jar>("javadocJar") {
 
 object ProjectInfo {
   const val GROUP = "io.github.lbenedetto"
-  const val VERSION = "1.0.0"
+  const val VERSION = "1.0.1"
 }
 
 group = ProjectInfo.GROUP

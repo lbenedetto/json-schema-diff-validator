@@ -172,7 +172,10 @@ object Inspector {
         changes.minItems += MinItemsChange(path, oldValue, newValue, changeType)
         return@forEach
       }
-      val fieldPath = path.back()
+      val fieldPathCandidate = path.back()
+      val isJsonArray = oldSchema.at(fieldPathCandidate).isArray
+      val fieldPath = if (isJsonArray) fieldPathCandidate.back() else fieldPathCandidate
+
       val oldType = oldSchema.at(fieldPath).resolveType(oldSchema)
       val newType = newSchema.at(fieldPath).resolveType(newSchema)
       val fieldName = getLastSubPath(fieldPath)
