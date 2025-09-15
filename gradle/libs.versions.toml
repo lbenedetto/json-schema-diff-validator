@@ -13,6 +13,6 @@ kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
 
 [plugins]
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.10" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.20" }
 dokka-core = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 dokka-javadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
