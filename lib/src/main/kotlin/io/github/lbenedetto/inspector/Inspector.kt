@@ -71,6 +71,8 @@ object Inspector {
         modifiedRequiredPaths.add(path)
       } else if (path.startsWith("/$") && path.parentSubPath() == "") {
         return@forEach // Ignore change
+      } else if (getLastSubPath(path) == "uniqueItems" && path.parentSubPath() != "properties") {
+        return@forEach // Ignore change
       } else {
         when (operation) {
           Operation.REMOVE -> {
