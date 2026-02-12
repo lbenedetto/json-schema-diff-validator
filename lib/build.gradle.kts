@@ -42,7 +42,7 @@ java {
   withSourcesJar()
 
   toolchain {
-    languageVersion = JavaLanguageVersion.of(21)
+    languageVersion = JavaLanguageVersion.of(25)
   }
 }
 
@@ -54,7 +54,7 @@ tasks.named<Jar>("javadocJar") {
 
 object ProjectInfo {
   const val GROUP = "io.github.lbenedetto"
-  const val VERSION = "1.0.1"
+  const val VERSION = "1.0.2"
 }
 
 group = ProjectInfo.GROUP
