@@ -55,12 +55,14 @@ object Inspector {
     val removedFieldPaths = mutableSetOf<String>()
     val addedFieldPaths = mutableSetOf<String>()
     val changedFieldPaths = mutableSetOf<String>()
+    val formatChangedPaths = mutableSetOf<String>()
 
     val modifiedAnyOfRegex = Regex(".*/anyOf/[\\d-]+$")
     val modifiedEnumRegex = Regex(".*/enum/[\\d-]+$")
     val modifiedRequiredRegex = Regex(".*/required/[\\d-]+$")
     val anyOfRegex = Regex(".*/properties/[^/]*/anyOf$")
     val refRegex = Regex(".*/properties/[^/]*/[$]ref$")
+    val formatRegex = Regex(".*/properties/[^/]*/format$")
 
     diff.forEach { node ->
       val operation = Operation.fromRfcName(node["op"].asString())
@@ -81,22 +83,30 @@ object Inspector {
       } else {
         when (operation) {
           Operation.REMOVE -> {
-            // Indicates we are changing to a different way of specifying the type of the property
-            if (path.matches(anyOfRegex) || path.matches(refRegex)) {
+            if (path.matches(formatRegex)) {
+              formatChangedPaths.add(path)
+            } else if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
             } else if (path.parentSubPath() != $$"$defs") {
               removedFieldPaths.add(path)
             }
           }
           Operation.ADD -> {
-            // Indicates we are changing to a different way of specifying the type of the property
-            if (path.matches(anyOfRegex) || path.matches(refRegex)) {
+            if (path.matches(formatRegex)) {
+              formatChangedPaths.add(path)
+            } else if (path.matches(anyOfRegex) || path.matches(refRegex)) {
               changedFieldPaths.add(path)
             } else if (path.parentSubPath() != $$"$defs") {
               addedFieldPaths.add(path)
             }
           }
-          Operation.REPLACE -> changedFieldPaths.add(path)
+          Operation.REPLACE -> {
+            if (path.matches(formatRegex)) {
+              formatChangedPaths.add(path)
+            } else {
+              changedFieldPaths.add(path)
+            }
+          }
           Operation.MOVE, Operation.COPY, Operation.TEST -> throw IllegalStateException("Unsupported operation: $node")
         }
       }
@@ -201,6 +211,13 @@ object Inspector {
       if (newTypeIgnoringNull != oldTypeIgnoringNull) {
         changes.fieldTypes += FieldTypeChange(path, oldTypeIgnoringNull.toString(), newTypeIgnoringNull.toString())
       }
+    }
+
+    formatChangedPaths.forEach { path ->
+      val oldFormat = oldSchema.at(path).asString().takeIf { it.isNotEmpty() }
+      val newFormat = newSchema.at(path).asString().takeIf { it.isNotEmpty() }
+      val changeType = if (newFormat == null) ChangeType.REMOVED else ChangeType.ADDED
+      changes.fieldFormats += FieldFormatChange(path.back(), changeType, oldFormat, newFormat)
     }
 
     return changes
