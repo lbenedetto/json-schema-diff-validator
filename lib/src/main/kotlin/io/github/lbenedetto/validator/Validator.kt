@@ -1,6 +1,5 @@
 package io.github.lbenedetto.validator
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.github.lbenedetto.inspector.Change
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.ChangeWithField
@@ -11,6 +10,7 @@ import io.github.lbenedetto.inspector.FieldTypeChange
 import io.github.lbenedetto.inspector.Inspector
 import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.inspector.NotAbsentRequirementChange
+import tools.jackson.databind.JsonNode
 
 object Validator {
   fun validate(

@@ -1,8 +1,8 @@
 package io.github.lbenedetto.jsonschema
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.TextNode
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.StringNode
 
 interface Type {
   fun isNullable(): Boolean
@@ -26,7 +26,7 @@ data class AnyOfType(val types: Set<Type>) : Type {
 
   companion object {
     fun from(types: Set<Type>): AnyOfType {
-      return AnyOfType(types.map { if (it is AnyOfType) it.types else setOf(it) }.flatten().toSet())
+      return AnyOfType(types.flatMap { if (it is AnyOfType) it.types else setOf(it) }.toSet())
     }
   }
 }
@@ -45,20 +45,20 @@ fun JsonNode.resolveType(rootNode: JsonNode): AnyOfType {
 }
 
 private fun resolveFromAnyOfNode(node: JsonNode, rootNode: JsonNode): AnyOfType {
-  return AnyOfType.from(node.map { it.resolveType(rootNode) }.toSet())
+  return AnyOfType.from(node.values().map { it.resolveType(rootNode) }.toSet())
 }
 
 private fun resolveFromTypeNode(node: JsonNode): AnyOfType {
   return when (node) {
-    is ArrayNode -> AnyOfType(node.map { it.asPrimitiveType() }.toSet())
-    is TextNode -> AnyOfType(setOf(node.asPrimitiveType()))
+    is ArrayNode -> AnyOfType(node.values().map { it.asPrimitiveType() }.toSet())
+    is StringNode -> AnyOfType(setOf(node.asPrimitiveType()))
     else -> throw IllegalStateException("Unexpected type node: $node")
   }
 }
 
 private fun resolveFromRefNode(refNode: JsonNode, rootNode: JsonNode): AnyOfType {
-  val ref = refNode.asText().substringAfter("#")
+  val ref = refNode.asString().substringAfter("#")
   return AnyOfType(setOf(ReferenceType(ref, rootNode.at(ref).resolveType(rootNode))))
 }
 
-private fun JsonNode.asPrimitiveType(): PrimitiveType = PrimitiveType.valueOf(textValue().uppercase())
+private fun JsonNode.asPrimitiveType(): PrimitiveType = PrimitiveType.valueOf(stringValue().uppercase())

@@ -16,6 +16,7 @@ repositories {
 
 dependencies {
   implementation(libs.zjsonpatch)
+  implementation(libs.jackson)
 
   testImplementation(libs.kotest.runner.junit5)
   testImplementation(libs.kotest.assertions.core)
@@ -42,7 +43,7 @@ java {
   withSourcesJar()
 
   toolchain {
-    languageVersion = JavaLanguageVersion.of(24)
+    languageVersion = JavaLanguageVersion.of(25)
   }
 }
 
@@ -54,7 +55,7 @@ tasks.named<Jar>("javadocJar") {
 
 object ProjectInfo {
   const val GROUP = "io.github.lbenedetto"
-  const val VERSION = "1.0.3"
+  const val VERSION = "2.0.0"
 }
 
 group = ProjectInfo.GROUP

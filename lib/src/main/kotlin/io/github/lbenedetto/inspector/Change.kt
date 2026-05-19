@@ -1,6 +1,6 @@
 package io.github.lbenedetto.inspector
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 
 interface Change {
   val path: String
