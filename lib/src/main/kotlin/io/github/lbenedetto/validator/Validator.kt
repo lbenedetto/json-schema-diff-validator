@@ -39,6 +39,7 @@ object Validator {
     result.addBasicChanges(changes.enumValue, config.enumValue)
     result.addFieldChanges(changes.fields, changesPerPath, config)
     result.addFieldTypeChanges(changes.fieldTypes)
+    result.addBasicChanges(changes.fieldFormats, config.format)
     result.addBasicChanges(changes.nonNullRequirement, config.nonNullRequirement)
     result.addBasicChanges(changes.notAbsentRequirement, config.notAbsentRequirement)
     result.addBasicChanges(changes.minItems, config.minValueRequirement)

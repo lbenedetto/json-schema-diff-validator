@@ -22,6 +22,11 @@ data class DetectedChanges(
   val fieldTypes: MutableSet<FieldTypeChange> = mutableSetOf(),
 
   /**
+   * Changes to field formats
+   */
+  val fieldFormats: MutableSet<FieldFormatChange> = mutableSetOf(),
+
+  /**
    * Changes to nullability requirements
    */
   val nonNullRequirement: MutableSet<NonNullRequirementChange> = mutableSetOf(),
@@ -36,6 +41,8 @@ data class DetectedChanges(
    */
   val minItems: MutableSet<MinItemsChange> = mutableSetOf()
 ) {
-  fun all(): Set<Change> = anyOf + enumValue + fields + fieldTypes + nonNullRequirement + notAbsentRequirement + minItems
+  fun all(): Set<Change> =
+    anyOf + enumValue + fields + fieldTypes + fieldFormats + nonNullRequirement + notAbsentRequirement + minItems
+
   fun perPath(): Map<String, List<Change>> = all().groupBy { it.path }
 }

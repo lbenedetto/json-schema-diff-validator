@@ -1,6 +1,5 @@
 package io.github.lbenedetto
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.lbenedetto.inspector.AnyOfChange
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.Inspector
