@@ -1,10 +1,9 @@
 package io.github.lbenedetto
 
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.lbenedetto.inspector.AnyOfChange
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.Inspector
-import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
 import io.github.lbenedetto.util.PatchDSL.jsonObject
 import io.github.lbenedetto.util.PatchDSL.node
@@ -13,6 +12,7 @@ import io.github.lbenedetto.util.Util
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import tools.jackson.databind.node.ObjectNode
 
 internal class AnyOfTest : BehaviorSpec({
   Given("A schema with an anyOf element") {
@@ -52,16 +52,16 @@ internal class AnyOfTest : BehaviorSpec({
       data class TestRef(val `$ref`: Int)
       data class TestData(val anyOf: List<TestRef>)
 
-      val oldSchema = Inspector.objectMapper.valueToTree<ObjectNode>(TestData(oldList.map { TestRef(it) }))
-      val newSchema = Inspector.objectMapper.valueToTree<ObjectNode>(TestData(newList.map { TestRef(it) }))
+      val oldSchema = Inspector.jsonMapper.valueToTree<ObjectNode>(TestData(oldList.map { TestRef(it) }))
+      val newSchema = Inspector.jsonMapper.valueToTree<ObjectNode>(TestData(newList.map { TestRef(it) }))
       Then("There should be no errors") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "10")), ChangeType.ADDED),
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "20")), ChangeType.ADDED),
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "30")), ChangeType.ADDED),
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "40")), ChangeType.ADDED),
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "50")), ChangeType.ADDED),
-          AnyOfChange("/anyOf", node(jsonObject("\$ref" to "9")), ChangeType.REMOVED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "10")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "20")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "30")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "40")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "50")), ChangeType.ADDED),
+          AnyOfChange("/anyOf", node(jsonObject($$"$ref" to "9")), ChangeType.REMOVED),
         )
       }
     }

@@ -1,25 +1,30 @@
 package io.github.lbenedetto.inspector
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.flipkart.zjsonpatch.DiffFlags
-import com.flipkart.zjsonpatch.JsonDiff
+import com.flipkart.zjsonpatch.Jackson3JsonDiff
 import com.flipkart.zjsonpatch.Operation
 import io.github.lbenedetto.jsonschema.resolveType
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.node.ArrayNode
 import java.nio.file.Paths
 import java.util.EnumSet
 import kotlin.collections.forEach
+import kotlin.collections.map
 
 object Inspector {
-  val objectMapper = ObjectMapper()
+  val jsonMapper: JsonMapper = JsonMapper.builder()
+    .accessorNaming(DefaultAccessorNamingStrategy.Provider()
+      .withFirstCharAcceptance(true, true))
+    .build()
 
   fun inspect(
     oldSchemaPath: String,
     newSchemaPath: String
   ): DetectedChanges {
-    val oldSchema = objectMapper.readTree(Paths.get(oldSchemaPath).toFile())
-    val newSchema = objectMapper.readTree(Paths.get(newSchemaPath).toFile())
+    val oldSchema = jsonMapper.readTree(Paths.get(oldSchemaPath).toFile())
+    val newSchema = jsonMapper.readTree(Paths.get(newSchemaPath).toFile())
 
     return inspect(oldSchema, newSchema)
   }
@@ -33,7 +38,7 @@ object Inspector {
     sortAllArrays(newSchema)
 
     // Simplify the diff configuration to only emit ADD, REMOVE, and REPLACE operations
-    val diff = JsonDiff.asJson(
+    val diff = Jackson3JsonDiff.asJson(
       oldSchema, newSchema, EnumSet.of(
         DiffFlags.OMIT_COPY_OPERATION,
         DiffFlags.OMIT_MOVE_OPERATION,
@@ -58,8 +63,8 @@ object Inspector {
     val refRegex = Regex(".*/properties/[^/]*/[$]ref$")
 
     diff.forEach { node ->
-      val operation = Operation.fromRfcName(node["op"].asText())
-      val path = node["path"].asText()
+      val operation = Operation.fromRfcName(node["op"].asString())
+      val path = node["path"].asString()
 
       if (path.matches(modifiedAnyOfRegex)) {
         modifiedAnyOfPaths.add(path.back())
@@ -125,9 +130,9 @@ object Inspector {
       val arrayDiff = computeArrayDiff(oldSchema, newSchema, path)
       val fieldLocation = "${path.back()}/properties"
       changes.notAbsentRequirement += arrayDiff.added
-        .map { NotAbsentRequirementChange(fieldLocation, it.textValue(), ChangeType.ADDED) }
+        .map { NotAbsentRequirementChange(fieldLocation, it.stringValue(), ChangeType.ADDED) }
       changes.notAbsentRequirement += arrayDiff.removed
-        .map { NotAbsentRequirementChange(fieldLocation, it.textValue(), ChangeType.REMOVED) }
+        .map { NotAbsentRequirementChange(fieldLocation, it.stringValue(), ChangeType.REMOVED) }
     }
 
     addedFieldPaths.forEach { path ->
@@ -227,8 +232,8 @@ object Inspector {
   }
 
   private fun JsonNode.isFieldRequired(path: String, fieldName: String): Boolean {
-    return at(path.back().back()).withArray<ArrayNode>("required")
-      .any { it.asText() == fieldName }
+    return at(path.back().back()).withArray("required")
+      .any { it.asString() == fieldName }
   }
 
   private fun JsonNode.isFieldNullable(path: String): Boolean {
@@ -245,17 +250,17 @@ object Inspector {
       return false
     }
 
-    val type = parentNode.get("type").asText()
+    val type = parentNode.get("type").asString()
     return type == "array"
   }
 
-  private fun JsonNode.isNullType() = has("type") && get("type").asText() == "null"
+  private fun JsonNode.isNullType() = has("type") && get("type").asString() == "null"
 
   data class ArrayDiff(val added: Set<JsonNode>, val removed: Set<JsonNode>)
 
   private fun computeArrayDiff(oldSchema: JsonNode, newSchema: JsonNode, path: String): ArrayDiff {
-    val oldList = oldSchema.withArray<ArrayNode>(path).toSet()
-    val newList = newSchema.withArray<ArrayNode>(path).toSet()
+    val oldList = oldSchema.withArray(path).toSet()
+    val newList = newSchema.withArray(path).toSet()
     return ArrayDiff(
       added = newList - oldList,
       removed = oldList - newList

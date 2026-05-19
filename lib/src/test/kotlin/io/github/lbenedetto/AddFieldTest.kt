@@ -5,7 +5,6 @@ import io.github.lbenedetto.inspector.FieldChange
 import io.github.lbenedetto.inspector.Inspector
 import io.github.lbenedetto.inspector.NonNullRequirementChange
 import io.github.lbenedetto.util.PatchDSL.add
-import io.github.lbenedetto.util.PatchDSL.jsonString
 import io.github.lbenedetto.util.Util
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec

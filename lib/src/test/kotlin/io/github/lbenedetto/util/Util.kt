@@ -1,8 +1,6 @@
 package io.github.lbenedetto.util
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.flipkart.zjsonpatch.JsonPatch
+import com.flipkart.zjsonpatch.Jackson3JsonPatch
 import io.github.lbenedetto.validator.Risk
 import io.github.lbenedetto.validator.Risk.*
 import io.github.lbenedetto.inspector.Inspector
@@ -13,11 +11,13 @@ import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldNot
 import org.intellij.lang.annotations.Language
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.node.ObjectNode
 import java.nio.file.Paths
 
 object Util {
   fun toDiffNode(@Language("JSON") vararg patches: String): JsonNode {
-    return Inspector.objectMapper.readTree(
+    return Inspector.jsonMapper.readTree(
       """
       [
         ${patches.joinToString(separator = ",") { it.trimIndent() }}
@@ -28,11 +28,11 @@ object Util {
 
   fun ObjectNode.withPatches(@Language("JSON") vararg patches: String): ObjectNode {
     val patch = toDiffNode(*patches)
-    return JsonPatch.apply(patch, this.deepCopy()) as ObjectNode
+    return Jackson3JsonPatch.apply(patch, this.deepCopy()) as ObjectNode
   }
 
   fun readSchema(schemaPath: String): ObjectNode {
-    return Inspector.objectMapper.readTree(Paths.get("src/test/resources/$schemaPath").toFile()) as ObjectNode
+    return Inspector.jsonMapper.readTree(Paths.get("src/test/resources/$schemaPath").toFile()) as ObjectNode
   }
 
   fun ValidationResult.shouldAllow(vararg message: String, enforceOthersEmpty: Boolean = true) {

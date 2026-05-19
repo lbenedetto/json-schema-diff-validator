@@ -1,6 +1,5 @@
 package io.github.lbenedetto
 
-import com.fasterxml.jackson.databind.node.TextNode
 import io.github.lbenedetto.inspector.ChangeType
 import io.github.lbenedetto.inspector.EnumValueChange
 import io.github.lbenedetto.inspector.Inspector
@@ -11,6 +10,7 @@ import io.github.lbenedetto.util.Util
 import io.github.lbenedetto.util.Util.withPatches
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import tools.jackson.databind.node.StringNode
 
 internal class EnumValueTest : BehaviorSpec({
   Given("A schema with an enum") {
@@ -21,7 +21,7 @@ internal class EnumValueTest : BehaviorSpec({
       )
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          EnumValueChange("/properties/someEnumValue/enum", TextNode("VALUE_C"), ChangeType.ADDED)
+          EnumValueChange("/properties/someEnumValue/enum", StringNode("VALUE_C"), ChangeType.ADDED)
         )
       }
     }
@@ -32,7 +32,7 @@ internal class EnumValueTest : BehaviorSpec({
       )
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          EnumValueChange("/properties/listOfEnumValues/items/enum", TextNode("VALUE_C"), ChangeType.ADDED)
+          EnumValueChange("/properties/listOfEnumValues/items/enum", StringNode("VALUE_C"), ChangeType.ADDED)
         )
       }
     }
@@ -43,7 +43,7 @@ internal class EnumValueTest : BehaviorSpec({
       )
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          EnumValueChange("/properties/someEnumValue/enum", TextNode("VALUE_A"), ChangeType.REMOVED)
+          EnumValueChange("/properties/someEnumValue/enum", StringNode("VALUE_A"), ChangeType.REMOVED)
         )
       }
     }
@@ -54,7 +54,7 @@ internal class EnumValueTest : BehaviorSpec({
       )
       Then("Change should be detected") {
         Inspector.inspect(oldSchema, newSchema).all().shouldContainExactlyInAnyOrder(
-          EnumValueChange("/properties/listOfEnumValues/items/enum", TextNode("VALUE_A"), ChangeType.REMOVED)
+          EnumValueChange("/properties/listOfEnumValues/items/enum", StringNode("VALUE_A"), ChangeType.REMOVED)
         )
       }
     }

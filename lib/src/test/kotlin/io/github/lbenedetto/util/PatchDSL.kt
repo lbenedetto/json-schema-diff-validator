@@ -1,8 +1,8 @@
 package io.github.lbenedetto.util
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.github.lbenedetto.inspector.Inspector
 import org.intellij.lang.annotations.Language
+import tools.jackson.databind.JsonNode
 
 object PatchDSL {
   @Language("JSON")
@@ -46,6 +46,6 @@ object PatchDSL {
   }
 
   fun node(@Language("JSON") node: String) : JsonNode {
-    return Inspector.objectMapper.readTree(node)
+    return Inspector.jsonMapper.readTree(node)
   }
 }
